@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>SQL Query Playground — Azure Cosmos DB</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script>window.PORTFOLIO_API_BASE = ''/* ← your Azure Function URL */;</script>
+  <script src="../js/api.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&family=Space+Mono&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d0f14;--surface:#14171f;--surface2:#1a1e28;--border:#222636;--accent:#6c63ff;--accent2:#3ef0c8;--text:#e2e6f0;--muted:#6b7280;--mono:'Space Mono',monospace}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    header{padding:.8rem 1.5rem;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:1rem;flex-shrink:0}
+    header h1{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800}
+    .badge{background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.3);color:#a89eff;font-family:var(--mono);font-size:.68rem;padding:.2rem .55rem;border-radius:999px}
+    .db-badge{background:rgba(62,240,200,.1);border:1px solid rgba(62,240,200,.25);color:var(--accent2);font-family:var(--mono);font-size:.68rem;padding:.2rem .55rem;border-radius:999px}
+    .status-bar{background:var(--surface2);border-bottom:1px solid var(--border);padding:.3rem 1.5rem;font-family:var(--mono);font-size:.7rem;color:var(--muted);flex-shrink:0}
+    .layout{display:grid;grid-template-columns:230px 1fr;flex:1;overflow:hidden}
+    aside{background:var(--surface);border-right:1px solid var(--border);padding:1rem;overflow-y:auto;display:flex;flex-direction:column;gap:1rem}
+    aside h3{font-family:var(--mono);font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+    .table-name{font-family:var(--mono);font-size:.78rem;color:var(--accent);padding:.45rem .7rem;background:var(--surface2);border-radius:6px}
+    .col-item{font-size:.73rem;color:var(--muted);padding:.28rem .7rem;font-family:var(--mono);border-left:2px solid var(--border);margin-left:.5rem;margin-bottom:.18rem}
+    .col-type{color:#4a5568;font-size:.62rem}
+    .tmpl-btn{width:100%;text-align:left;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.45rem .7rem;color:var(--muted);font-size:.73rem;cursor:pointer;margin-bottom:.4rem;transition:all .2s;font-family:var(--mono)}
+    .tmpl-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .saved-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.4rem .7rem;margin-bottom:.35rem;cursor:pointer;transition:all .2s}
+    .saved-item:hover{border-color:var(--accent2)}
+    .saved-item-name{font-family:var(--mono);font-size:.72rem;color:var(--accent2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .saved-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:.1rem .3rem;transition:color .15s}
+    .saved-del:hover{color:var(--red,#f87171)}
+    main{display:flex;flex-direction:column;overflow:hidden}
+    .editor-bar{padding:.75rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:.75rem;background:var(--surface);flex-shrink:0}
+    #sql-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.65rem 1rem;color:var(--accent2);font-family:var(--mono);font-size:.83rem;outline:none;resize:none;height:78px;transition:border-color .2s}
+    #sql-input:focus{border-color:var(--accent)}
+    .btn-row{display:flex;flex-direction:column;gap:.4rem;flex-shrink:0}
+    .run-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.6rem 1.2rem;font-weight:600;cursor:pointer;font-size:.85rem;white-space:nowrap;transition:all .2s}
+    .run-btn:hover{background:#5a52e0}
+    .save-btn{background:var(--surface2);border:1px solid var(--border);color:var(--accent2);border-radius:8px;padding:.45rem 1rem;font-size:.78rem;cursor:pointer;transition:all .2s;font-family:var(--mono)}
+    .save-btn:hover{border-color:var(--accent2)}
+    .results{flex:1;overflow:auto;display:flex;flex-direction:column}
+    .result-header{padding:.55rem 1rem;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+    .result-header span{font-family:var(--mono);font-size:.73rem;color:var(--muted)}
+    .count{color:var(--accent2);background:rgba(62,240,200,.1);border:1px solid rgba(62,240,200,.2);border-radius:999px;padding:.1rem .45rem}
+    .result-split{display:grid;grid-template-columns:1fr 1fr;flex:1;overflow:hidden}
+    .table-wrap{overflow:auto;padding:.9rem;border-right:1px solid var(--border)}
+    table{width:100%;border-collapse:collapse;font-size:.8rem}
+    th{background:var(--surface2);color:var(--muted);font-family:var(--mono);font-size:.67rem;text-transform:uppercase;padding:.45rem .7rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:.4rem .7rem;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap}
+    tr:hover td{background:rgba(255,255,255,.02)}
+    .chart-panel{padding:.9rem;overflow:hidden;display:flex;flex-direction:column;gap:.4rem}
+    .chart-panel h4{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-transform:uppercase}
+    .error-msg{padding:.9rem;color:#f87171;font-family:var(--mono);font-size:.82rem;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.15);border-radius:8px;margin:.9rem}
+    ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+  </style>
+</head>
+<body>
+<header>
+  <span style="font-size:1.3rem">🛢️</span>
+  <h1>SQL Query Playground</h1>
+  <span class="badge">In-Browser SQL Engine</span>
+  <span class="db-badge">☁️ Queries → Cosmos DB</span>
+</header>
+<div class="status-bar" id="db-status">Connecting to Azure Cosmos DB…</div>
+
+<div class="layout">
+  <aside>
+    <div>
+      <h3>Schema</h3>
+      <div class="table-name">📋 orders</div>
+      <div class="col-item">id <span class="col-type">INT PK</span></div>
+      <div class="col-item">customer_id <span class="col-type">INT FK</span></div>
+      <div class="col-item">product <span class="col-type">TEXT</span></div>
+      <div class="col-item">category <span class="col-type">TEXT</span></div>
+      <div class="col-item">region <span class="col-type">TEXT</span></div>
+      <div class="col-item">amount <span class="col-type">FLOAT</span></div>
+      <div class="col-item">cost <span class="col-type">FLOAT</span></div>
+      <div class="col-item">quantity <span class="col-type">INT</span></div>
+      <div class="col-item">order_date <span class="col-type">TEXT</span></div>
+      <div class="col-item">status <span class="col-type">TEXT</span></div>
+      <div class="table-name" style="margin-top:.6rem">👥 customers</div>
+      <div class="col-item">id <span class="col-type">INT PK</span></div>
+      <div class="col-item">name <span class="col-type">TEXT</span></div>
+      <div class="col-item">country <span class="col-type">TEXT</span></div>
+      <div class="col-item">segment <span class="col-type">TEXT</span></div>
+    </div>
+    <div>
+      <h3>Templates</h3>
+      <button class="tmpl-btn" onclick="setQ(QUERIES.revenue)">Revenue by region</button>
+      <button class="tmpl-btn" onclick="setQ(QUERIES.top)">Top products</button>
+      <button class="tmpl-btn" onclick="setQ(QUERIES.monthly)">Monthly revenue</button>
+      <button class="tmpl-btn" onclick="setQ(QUERIES.join)">JOIN customers</button>
+      <button class="tmpl-btn" onclick="setQ(QUERIES.margin)">Profit margin</button>
+      <button class="tmpl-btn" onclick="setQ(QUERIES.status)">Order status</button>
+    </div>
+    <div>
+      <h3>Saved in Cosmos DB <span id="saved-count" style="color:var(--accent2)"></span></h3>
+      <div id="saved-list"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="editor-bar">
+      <textarea id="sql-input" spellcheck="false">SELECT category, SUM(amount) as total_revenue, COUNT(*) as orders
+FROM orders
+GROUP BY category
+ORDER BY total_revenue DESC</textarea>
+      <div class="btn-row">
+        <button class="run-btn" onclick="runQuery()">▶ Run</button>
+        <button class="save-btn" onclick="saveQuery()">☁️ Save</button>
+      </div>
+    </div>
+    <div class="results" id="results">
+      <div style="padding:2rem;color:var(--muted);text-align:center;font-size:.88rem">Run a query to see results. Save it to Azure Cosmos DB with ☁️ Save.</div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Data ──
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+const PRODS=['Laptop Pro','Tablet Air','SmartPhone X','Monitor 4K','Keyboard Elite','Mouse Precision','Headset Pro','Webcam HD','SSD 1TB','Router WiFi6'];
+const CATS={'Laptop Pro':'Computers','Tablet Air':'Computers','SmartPhone X':'Phones','Monitor 4K':'Displays','Keyboard Elite':'Peripherals','Mouse Precision':'Peripherals','Headset Pro':'Audio','Webcam HD':'Cameras','SSD 1TB':'Storage','Router WiFi6':'Networking'};
+const REGIONS=['North America','Europe','Asia Pacific','Latin America','Middle East'];
+const STATS=['Completed','Completed','Completed','Pending','Cancelled'];
+const PX={'Laptop Pro':1200,'Tablet Air':650,'SmartPhone X':900,'Monitor 4K':550,'Keyboard Elite':150,'Mouse Precision':80,'Headset Pro':200,'Webcam HD':120,'SSD 1TB':100,'Router WiFi6':180};
+const MONTHS=['2024-01','2024-02','2024-03','2024-04','2024-05','2024-06','2024-07','2024-08','2024-09','2024-10','2024-11','2024-12'];
+const customers=Array.from({length:50},(_,i)=>({id:i+1,name:`Customer ${i+1}`,country:['USA','Germany','Japan','Brazil','UAE'][rnd(0,4)],segment:['Enterprise','SMB','Consumer','Government'][rnd(0,3)]}));
+const orders=Array.from({length:300},(_,i)=>{const p=PRODS[rnd(0,9)],q=rnd(1,15),a=parseFloat((PX[p]*q*(0.9+Math.random()*.2)).toFixed(2)),c=parseFloat((a*.6).toFixed(2));return{id:i+1,customer_id:rnd(1,50),product:p,category:CATS[p],region:REGIONS[rnd(0,4)],amount:a,cost:c,quantity:q,order_date:MONTHS[rnd(0,11)]+'-'+String(rnd(1,28)).padStart(2,'0'),status:STATS[rnd(0,4)]};});
+const DB={orders,customers};
+
+// ── SQL Engine ──
+function runQuery(){
+  const sql=document.getElementById('sql-input').value.trim();
+  try{renderResults(executeSQL(sql.toLowerCase(),sql));}
+  catch(e){document.getElementById('results').innerHTML=`<div class="error-msg">⚠️ ${e.message}</div>`;}
+}
+
+function executeSQL(sqlLow){
+  const sm=sqlLow.match(/select\s+([\s\S]+?)\s+from\s+(\w+)/);
+  if(!sm)throw new Error('Invalid SELECT ... FROM syntax');
+  const sel=sm[1].trim(),from=sm[2].trim();
+  let rows;
+  const jm=sqlLow.match(/join\s+(\w+)\s+on\s+(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/);
+  if(jm){const rt=jm[1],lc=jm[3],rc=jm[5],L=DB[from],R=DB[rt];if(!L)throw new Error(`Unknown table: ${from}`);if(!R)throw new Error(`Unknown table: ${rt}`);rows=L.flatMap(l=>R.filter(r=>String(l[lc])===String(r[rc])).map(r=>({...l,...r})));}
+  else{if(!DB[from])throw new Error(`Unknown table: ${from}. Available: orders, customers`);rows=[...DB[from]];}
+  const wm=sqlLow.match(/where\s+([\s\S]+?)(?=\s+group|\s+order|\s+limit|$)/);
+  if(wm)rows=rows.filter(r=>evalWhere(wm[1].trim(),r));
+  const cols=sel==='*'?Object.keys(rows[0]||{}):sel.split(',').map(c=>c.trim());
+  const gm=sqlLow.match(/group\s+by\s+([\s\S]+?)(?=\s+having|\s+order|\s+limit|$)/);
+  if(gm){
+    const gc=gm[1].split(',').map(c=>c.trim().split(' ')[0]),grps={};
+    rows.forEach(r=>{const k=gc.map(g=>r[g]).join('|');if(!grps[k])grps[k]={...Object.fromEntries(gc.map(g=>[g,r[g]])),_rows:[]};grps[k]._rows.push(r);});
+    rows=Object.values(grps).map(g=>{const o={};cols.forEach(ce=>{const al=ce.match(/\bas\s+(\w+)/i);const k=al?al[1]:ce.replace(/\s+as\s+\w+/i,'').trim();o[k]=evalAgg(ce,g._rows,g);});return o;});
+  }else if(sel!=='*'){rows=rows.map(r=>{const o={};cols.forEach(ce=>{const al=ce.match(/\bas\s+(\w+)/i);const k=al?al[1]:ce.replace(/[\s\S]*?\b(\w+)$/,'$1').trim();o[k]=evalAgg(ce,[r],r);});return o;});}
+  const om=sqlLow.match(/order\s+by\s+([\s\S]+?)(?=\s+limit|$)/);
+  if(om){const pts=om[1].trim().split(',')[0].split(/\s+/);const col=pts[0],desc=pts[1]==='desc';rows.sort((a,b)=>{const av=parseFloat(a[col])||a[col]||0,bv=parseFloat(b[col])||b[col]||0;return desc?(bv>av?1:-1):(av>bv?1:-1);});}
+  const lm=sqlLow.match(/limit\s+(\d+)/);
+  if(lm)rows=rows.slice(0,parseInt(lm[1]));
+  return rows;
+}
+function evalWhere(c,r){try{const s=c.replace(/(\w+)\s*=\s*'([^']+)'/g,(m,col,val)=>`String(r['${col}']||'')==='${val}'`).replace(/(\w+)\s*>=\s*([\d.]+)/g,(m,col,val)=>`(parseFloat(r['${col}'])||0)>=${val}`).replace(/(\w+)\s*<=\s*([\d.]+)/g,(m,col,val)=>`(parseFloat(r['${col}'])||0)<=${val}`).replace(/(\w+)\s*>\s*([\d.]+)/g,(m,col,val)=>`(parseFloat(r['${col}'])||0)>${val}`).replace(/(\w+)\s*<\s*([\d.]+)/g,(m,col,val)=>`(parseFloat(r['${col}'])||0)<${val}`);return new Function('r','return '+s)(r);}catch{return true;}}
+function evalAgg(e,rows,fb){const sm=e.match(/sum\s*\(\s*(\w+)\s*\)/i);if(sm)return parseFloat(rows.reduce((a,r)=>a+(parseFloat(r[sm[1]])||0),0).toFixed(2));const cm=e.match(/count\s*\(\s*[\w*]+\s*\)/i);if(cm)return rows.length;const am=e.match(/avg\s*\(\s*(\w+)\s*\)/i);if(am)return parseFloat((rows.reduce((a,r)=>a+(parseFloat(r[am[1]])||0),0)/rows.length).toFixed(2));const mi=e.match(/min\s*\(\s*(\w+)\s*\)/i);if(mi)return Math.min(...rows.map(r=>parseFloat(r[mi[1]])||0));const ma=e.match(/max\s*\(\s*(\w+)\s*\)/i);if(ma)return Math.max(...rows.map(r=>parseFloat(r[ma[1]])||0));const col=e.replace(/\s+as\s+\w+/i,'').trim();return fb[col]!==undefined?fb[col]:rows[0]?.[col];}
+
+let resultChart;
+function renderResults(rows){
+  if(!rows.length){document.getElementById('results').innerHTML='<div style="padding:2rem;color:var(--muted);text-align:center">No rows returned.</div>';return;}
+  const cols=Object.keys(rows[0]);
+  let html=`<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+  rows.slice(0,200).forEach(r=>{html+=`<tr>${cols.map(c=>`<td>${r[c]!==undefined?r[c]:''}</td>`).join('')}</tr>`;});
+  html+='</tbody></table>';
+  document.getElementById('results').innerHTML=`
+    <div class="result-header"><span>Results</span><span class="count">${rows.length} rows</span><span>Cols: ${cols.join(', ')}</span></div>
+    <div class="result-split">
+      <div class="table-wrap">${html}</div>
+      <div class="chart-panel"><h4>Auto Chart</h4><canvas id="rc"></canvas></div>
+    </div>`;
+  const nc=cols.filter(c=>rows.every(r=>typeof r[c]==='number')),sc=cols.filter(c=>rows.some(r=>typeof r[c]==='string'));
+  if(sc.length&&nc.length){
+    if(resultChart)resultChart.destroy();
+    resultChart=new Chart(document.getElementById('rc'),{type:'bar',data:{labels:rows.slice(0,12).map(r=>String(r[sc[0]]).slice(0,16)),datasets:[{label:nc[0],data:rows.slice(0,12).map(r=>r[nc[0]]),backgroundColor:'rgba(108,99,255,0.6)',borderColor:'#6c63ff',borderWidth:1,borderRadius:4}]},options:{responsive:true,plugins:{legend:{labels:{color:'#e2e6f0'}}},scales:{x:{ticks:{color:'#6b7280',maxRotation:30}},y:{ticks:{color:'#6b7280'}}}}});
+  }
+}
+
+// ── Cosmos DB: Save & Load queries ──
+let savedQueries=[];
+
+async function loadSaved(){
+  if(!API_BASE){document.getElementById('db-status').textContent='⚠️ API_BASE not set — saved queries disabled';return;}
+  try{
+    savedQueries=await SqlAPI.list();
+    document.getElementById('db-status').textContent=`✓ Azure Cosmos DB connected · ${savedQueries.length} saved queries · user: ${USER_ID}`;
+    renderSaved();
+  }catch(e){document.getElementById('db-status').textContent='✗ Cosmos DB: '+e.message;}
+}
+
+function renderSaved(){
+  document.getElementById('saved-count').textContent=`(${savedQueries.length})`;
+  document.getElementById('saved-list').innerHTML=savedQueries.map(q=>`
+    <div class="saved-item" title="${q.sql}">
+      <span class="saved-item-name" onclick="loadSaved_q('${q.id}')">${q.name}</span>
+      <button class="saved-del" onclick="deleteSaved('${q.id}')">✕</button>
+    </div>`).join('')||'<div style="font-size:.72rem;color:var(--muted);font-family:var(--mono)">No saved queries</div>';
+}
+
+function loadSaved_q(id){const q=savedQueries.find(s=>s.id===id);if(q){document.getElementById('sql-input').value=q.sql;runQuery();}}
+
+async function saveQuery(){
+  const sql=document.getElementById('sql-input').value.trim();
+  if(!sql)return;
+  if(!API_BASE){alert('Set API_BASE to save queries to Azure Cosmos DB');return;}
+  let name=prompt('Query name (shown in sidebar):','My Query');
+  if(!name)return;
+  try{
+    let rows=0;try{rows=executeSQL(sql.toLowerCase()).length;}catch{}
+    const q=await SqlAPI.save({name,sql,rowCount:rows});
+    savedQueries.unshift(q);renderSaved();
+    document.getElementById('db-status').textContent=`✓ Saved "${name}" to Cosmos DB`;
+  }catch(e){alert('Save error: '+e.message);}
+}
+
+async function deleteSaved(id){
+  try{await SqlAPI.delete(id);savedQueries=savedQueries.filter(q=>q.id!==id);renderSaved();}
+  catch(e){alert('Delete error: '+e.message);}
+}
+
+const QUERIES={
+  revenue:`SELECT region, SUM(amount) as total_revenue, COUNT(*) as orders\nFROM orders\nGROUP BY region\nORDER BY total_revenue DESC`,
+  top:`SELECT product, SUM(amount) as revenue, SUM(quantity) as units_sold\nFROM orders\nGROUP BY product\nORDER BY revenue DESC\nLIMIT 10`,
+  monthly:`SELECT order_date, SUM(amount) as revenue\nFROM orders\nGROUP BY order_date\nORDER BY order_date`,
+  join:`SELECT o.product, o.amount, c.name, c.country\nFROM orders o\nJOIN customers c ON o.customer_id = c.id\nLIMIT 20`,
+  margin:`SELECT category, SUM(amount) as revenue, SUM(amount - cost) as profit\nFROM orders\nGROUP BY category\nORDER BY profit DESC`,
+  status:`SELECT status, COUNT(*) as count\nFROM orders\nGROUP BY status\nORDER BY count DESC`
+};
+function setQ(q){document.getElementById('sql-input').value=q;runQuery();}
+
+runQuery();
+loadSaved();
+</script>
+</body>
+</html>
