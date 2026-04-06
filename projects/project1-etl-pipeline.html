@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ETL Pipeline Monitor — Fahim Al Efaji</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b0f;--s1:#0d1117;--s2:#161b22;--s3:#1c2130;
+  --border:#21262d;--border2:#30363d;
+  --green:#39d353;--green2:#26a641;--green3:#0e4429;
+  --blue:#58a6ff;--orange:#f0883e;--red:#f85149;--purple:#bc8cff;
+  --text:#e6edf3;--muted:#7d8590;--muted2:#484f58;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-sans:'IBM Plex Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;min-height:100vh;overflow-x:hidden}
+
+/* ── Top bar ── */
+.topbar{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+}
+.topbar-left{display:flex;align-items:center;gap:1rem}
+.logo{font-family:var(--font-mono);font-size:.95rem;font-weight:600;color:var(--green);letter-spacing:.02em}
+.topbar-badges{display:flex;gap:.5rem}
+.tbadge{font-family:var(--font-mono);font-size:.65rem;padding:.2rem .55rem;border-radius:4px;border:1px solid}
+.tbadge.live{background:rgba(57,211,83,.08);border-color:rgba(57,211,83,.3);color:var(--green)}
+.tbadge.py{background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.3);color:var(--blue)}
+.tbadge.sf{background:rgba(188,140,255,.08);border-color:rgba(188,140,255,.3);color:var(--purple)}
+.clock{font-family:var(--font-mono);font-size:.75rem;color:var(--muted)}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 49px)}
+
+/* ── Sidebar ── */
+.sidebar{background:var(--s1);border-right:1px solid var(--border);padding:1rem;overflow-y:auto}
+.sidebar-section{margin-bottom:1.5rem}
+.sidebar-label{font-family:var(--font-mono);font-size:.65rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.6rem;padding-left:.25rem}
+.pipeline-item{
+  display:flex;align-items:center;gap:.6rem;padding:.5rem .6rem;
+  border-radius:6px;cursor:pointer;transition:background .15s;margin-bottom:.2rem;
+  border:1px solid transparent;
+}
+.pipeline-item:hover{background:var(--s2)}
+.pipeline-item.active{background:var(--s2);border-color:var(--border2)}
+.pi-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pi-dot.ok{background:var(--green);box-shadow:0 0 6px rgba(57,211,83,.5)}
+.pi-dot.warn{background:var(--orange);box-shadow:0 0 6px rgba(240,136,62,.5)}
+.pi-dot.err{background:var(--red);box-shadow:0 0 6px rgba(248,81,73,.5)}
+.pi-dot.idle{background:var(--muted2)}
+.pi-name{font-size:.82rem;font-weight:500;flex:1}
+.pi-time{font-family:var(--font-mono);font-size:.65rem;color:var(--muted)}
+.stats-mini{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.sm-card{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:.6rem}
+.sm-val{font-family:var(--font-mono);font-size:1.1rem;font-weight:600;color:var(--text)}
+.sm-lbl{font-size:.65rem;color:var(--muted);margin-top:.15rem}
+
+/* ── Main content ── */
+.main{padding:1.25rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.25rem}
+
+/* ── KPI row ── */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem}
+.kpi-card{
+  background:var(--s2);border:1px solid var(--border);border-radius:8px;
+  padding:1rem 1.1rem;position:relative;overflow:hidden;
+}
+.kpi-card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+}
+.kpi-card.green::after{background:linear-gradient(90deg,var(--green3),var(--green))}
+.kpi-card.blue::after{background:linear-gradient(90deg,#0d419d,var(--blue))}
+.kpi-card.orange::after{background:linear-gradient(90deg,#6e3100,var(--orange))}
+.kpi-card.red::after{background:linear-gradient(90deg,#67060c,var(--red))}
+.kpi-label{font-size:.7rem;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem}
+.kpi-val{font-family:var(--font-mono);font-size:1.8rem;font-weight:600;line-height:1}
+.kpi-val.green{color:var(--green)}
+.kpi-val.blue{color:var(--blue)}
+.kpi-val.orange{color:var(--orange)}
+.kpi-val.red{color:var(--red)}
+.kpi-sub{font-size:.68rem;color:var(--muted);margin-top:.3rem}
+.kpi-icon{position:absolute;right:.9rem;top:.9rem;font-size:1.4rem;opacity:.25}
+
+/* ── Section header ── */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.sec-title{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:.5rem}
+.sec-title::before{content:'';display:inline-block;width:3px;height:12px;background:var(--green);border-radius:2px}
+
+/* ── Pipeline flow vis ── */
+.pipeline-flow{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:1.25rem}
+.flow-track{display:flex;align-items:center;gap:0;overflow-x:auto;padding:.5rem 0}
+.flow-stage{
+  display:flex;flex-direction:column;align-items:center;gap:.4rem;
+  min-width:110px;position:relative;
+}
+.flow-stage::after{
+  content:'';position:absolute;right:-20px;top:18px;
+  width:40px;height:1px;background:var(--border2);
+}
+.flow-stage:last-child::after{display:none}
+.fs-box{
+  width:80px;height:38px;border-radius:6px;border:1px solid;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:.68rem;font-weight:500;
+  position:relative;overflow:hidden;cursor:pointer;transition:all .2s;
+}
+.fs-box:hover{transform:translateY(-2px)}
+.fs-box.done{background:rgba(57,211,83,.08);border-color:rgba(57,211,83,.3);color:var(--green)}
+.fs-box.running{background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.4);color:var(--blue)}
+.fs-box.warning{background:rgba(240,136,62,.08);border-color:rgba(240,136,62,.3);color:var(--orange)}
+.fs-box.error{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.3);color:var(--red)}
+.fs-box.idle{background:var(--s3);border-color:var(--border);color:var(--muted)}
+.fs-box.running::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(88,166,255,.15),transparent);
+  animation:shimmer 1.4s infinite;
+}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.fs-label{font-size:.65rem;color:var(--muted);text-align:center;font-family:var(--font-mono)}
+.fs-rows{font-size:.62rem;color:var(--muted2);font-family:var(--font-mono)}
+.flow-arrow{font-size:1.1rem;color:var(--border2);flex-shrink:0;margin:0 4px;padding-bottom:18px}
+
+/* ── Run log ── */
+.run-log{background:var(--s2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.log-table{width:100%;border-collapse:collapse}
+.log-table th{
+  background:var(--s1);padding:.5rem .85rem;text-align:left;
+  font-family:var(--font-mono);font-size:.65rem;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border);
+}
+.log-table td{
+  padding:.55rem .85rem;border-bottom:1px solid var(--border);
+  font-size:.78rem;vertical-align:middle;
+}
+.log-table tr:last-child td{border-bottom:none}
+.log-table tr:hover td{background:rgba(255,255,255,.02)}
+.status-pill{
+  display:inline-flex;align-items:center;gap:.3rem;
+  font-family:var(--font-mono);font-size:.65rem;padding:.18rem .55rem;
+  border-radius:4px;border:1px solid;
+}
+.status-pill.success{background:rgba(57,211,83,.08);border-color:rgba(57,211,83,.25);color:var(--green)}
+.status-pill.running{background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.25);color:var(--blue)}
+.status-pill.warning{background:rgba(240,136,62,.08);border-color:rgba(240,136,62,.25);color:var(--orange)}
+.status-pill.failed{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.25);color:var(--red)}
+.mono{font-family:var(--font-mono)}
+.duration-bar{height:4px;border-radius:2px;background:var(--border2);margin-top:.3rem;overflow:hidden}
+.duration-fill{height:100%;border-radius:2px;background:var(--green2);transition:width .6s}
+
+/* ── Charts row ── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+.chart-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:1.1rem}
+
+/* ── Live log terminal ── */
+.terminal{
+  background:#010409;border:1px solid var(--border);border-radius:8px;
+  padding:1rem;font-family:var(--font-mono);font-size:.72rem;
+  height:200px;overflow-y:auto;line-height:1.7;
+}
+.log-line{display:flex;gap:.75rem;padding:.1rem 0}
+.log-ts{color:var(--muted2);flex-shrink:0}
+.log-lvl{flex-shrink:0;width:50px}
+.log-lvl.INFO{color:var(--blue)}
+.log-lvl.OK{color:var(--green)}
+.log-lvl.WARN{color:var(--orange)}
+.log-lvl.ERROR{color:var(--red)}
+.log-msg{color:var(--muted)}
+.log-msg span{color:var(--text)}
+
+/* ── Trigger btn ── */
+.run-btn{
+  background:var(--green3);border:1px solid rgba(57,211,83,.4);color:var(--green);
+  font-family:var(--font-mono);font-size:.75rem;padding:.4rem .9rem;
+  border-radius:6px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:.4rem;
+}
+.run-btn:hover{background:rgba(57,211,83,.15);box-shadow:0 0 12px rgba(57,211,83,.2)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">⬡ ETL Pipeline Monitor</div>
+    <div class="topbar-badges">
+      <span class="tbadge live">● LIVE</span>
+      <span class="tbadge py">Python 3.11</span>
+      <span class="tbadge sf">Snowflake + SQL Server</span>
+    </div>
+  </div>
+  <div class="clock" id="clock">--:--:--</div>
+</div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Active Pipelines</div>
+      <div class="pipeline-item active" onclick="selectPipeline('audit')">
+        <div class="pi-dot ok"></div>
+        <div>
+          <div class="pi-name">audit_financial_etl</div>
+          <div class="pi-time">Last: 2 min ago</div>
+        </div>
+      </div>
+      <div class="pipeline-item" onclick="selectPipeline('sales')">
+        <div class="pi-dot ok"></div>
+        <div>
+          <div class="pi-name">sales_snowflake_sync</div>
+          <div class="pi-time">Last: 18 min ago</div>
+        </div>
+      </div>
+      <div class="pipeline-item" onclick="selectPipeline('kpi')">
+        <div class="pi-dot warn"></div>
+        <div>
+          <div class="pi-name">kpi_powerbi_refresh</div>
+          <div class="pi-time">Last: 1 hr ago</div>
+        </div>
+      </div>
+      <div class="pipeline-item" onclick="selectPipeline('anomaly')">
+        <div class="pi-dot running"></div>
+        <div>
+          <div class="pi-name">anomaly_detection_ml</div>
+          <div class="pi-time">Running now…</div>
+        </div>
+      </div>
+      <div class="pipeline-item" onclick="selectPipeline('archive')">
+        <div class="pi-dot idle"></div>
+        <div>
+          <div class="pi-name">archive_cold_storage</div>
+          <div class="pi-time">Scheduled 02:00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Today's Stats</div>
+      <div class="stats-mini">
+        <div class="sm-card">
+          <div class="sm-val" id="sb-runs">47</div>
+          <div class="sm-lbl">Total Runs</div>
+        </div>
+        <div class="sm-card">
+          <div class="sm-val" style="color:var(--green)" id="sb-ok">44</div>
+          <div class="sm-lbl">Successful</div>
+        </div>
+        <div class="sm-card">
+          <div class="sm-val" style="color:var(--orange)" id="sb-warn">2</div>
+          <div class="sm-lbl">Warnings</div>
+        </div>
+        <div class="sm-card">
+          <div class="sm-val" style="color:var(--red)" id="sb-err">1</div>
+          <div class="sm-lbl">Errors</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Data Sources</div>
+      <div style="display:flex;flex-direction:column;gap:.4rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:.75rem">
+          <span style="color:var(--muted)">SQL Server</span>
+          <span style="font-family:var(--font-mono);color:var(--green);font-size:.68rem">● connected</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:.75rem">
+          <span style="color:var(--muted)">Snowflake</span>
+          <span style="font-family:var(--font-mono);color:var(--green);font-size:.68rem">● connected</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:.75rem">
+          <span style="color:var(--muted)">Azure SQL</span>
+          <span style="font-family:var(--font-mono);color:var(--green);font-size:.68rem">● connected</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:.75rem">
+          <span style="color:var(--muted)">SAP ERP</span>
+          <span style="font-family:var(--font-mono);color:var(--orange);font-size:.68rem">⚠ slow</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- KPI row -->
+    <div class="kpi-row">
+      <div class="kpi-card green">
+        <div class="kpi-icon">⚙️</div>
+        <div class="kpi-label">Rows Processed</div>
+        <div class="kpi-val green" id="kpi-rows">2,847,392</div>
+        <div class="kpi-sub">↑ 12% vs yesterday</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-icon">⏱</div>
+        <div class="kpi-label">Avg Duration</div>
+        <div class="kpi-val blue" id="kpi-dur">4m 12s</div>
+        <div class="kpi-sub">↓ 8% improvement</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-label">Data Volume</div>
+        <div class="kpi-val orange" id="kpi-vol">18.4 GB</div>
+        <div class="kpi-sub">Transferred today</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-icon">🔴</div>
+        <div class="kpi-label">Error Rate</div>
+        <div class="kpi-val red" id="kpi-err">2.1%</div>
+        <div class="kpi-sub">↑ 0.3% vs avg</div>
+      </div>
+    </div>
+
+    <!-- Pipeline Flow -->
+    <div class="pipeline-flow">
+      <div class="sec-head">
+        <div class="sec-title">Pipeline: audit_financial_etl</div>
+        <button class="run-btn" onclick="triggerRun()">▶ Trigger Run</button>
+      </div>
+      <div class="flow-track" id="flow-track">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="sec-head"><div class="sec-title">Rows Processed — 24h</div></div>
+        <canvas id="rows-chart" height="130"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="sec-head"><div class="sec-title">Run Duration — Last 20 Runs</div></div>
+        <canvas id="dur-chart" height="130"></canvas>
+      </div>
+    </div>
+
+    <!-- Run Log -->
+    <div class="run-log">
+      <div class="sec-head" style="padding:.75rem 1rem .5rem">
+        <div class="sec-title">Run History</div>
+        <span style="font-family:var(--font-mono);font-size:.65rem;color:var(--muted)">Last 10 runs</span>
+      </div>
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Run ID</th>
+            <th>Pipeline</th>
+            <th>Started</th>
+            <th>Duration</th>
+            <th>Rows In</th>
+            <th>Rows Out</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="run-log-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Live Terminal -->
+    <div>
+      <div class="sec-head">
+        <div class="sec-title">Live Log Output</div>
+        <span style="font-family:var(--font-mono);font-size:.65rem;color:var(--green)">● streaming</span>
+      </div>
+      <div class="terminal" id="terminal"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Clock ──
+function tick(){
+  const now=new Date();
+  document.getElementById('clock').textContent=
+    now.toLocaleTimeString('en-GB',{hour12:false})+' UTC';
+}
+tick(); setInterval(tick,1000);
+
+// ── Pipeline stages ──
+const STAGES=[
+  {name:'Extract',sub:'SQL Server',rows:'1,284,201',status:'done'},
+  {name:'Validate',sub:'Schema check',rows:'1,284,201',status:'done'},
+  {name:'Clean',sub:'Null/dupe rm',rows:'1,281,893',status:'done'},
+  {name:'Transform',sub:'Business logic',rows:'1,281,893',status:'running'},
+  {name:'Enrich',sub:'Join SAP ref',rows:'—',status:'idle'},
+  {name:'Load',sub:'→ Snowflake',rows:'—',status:'idle'},
+  {name:'Index',sub:'DW optimize',rows:'—',status:'idle'},
+];
+
+function renderFlow(){
+  const track=document.getElementById('flow-track');
+  track.innerHTML='';
+  STAGES.forEach((s,i)=>{
+    const stage=document.createElement('div');
+    stage.className='flow-stage';
+    stage.innerHTML=`
+      <div class="fs-box ${s.status}" title="${s.sub}">${s.name}</div>
+      <div class="fs-label">${s.sub}</div>
+      <div class="fs-rows">${s.rows!=='—'?s.rows+' rows':''}</div>
+    `;
+    track.appendChild(stage);
+    if(i<STAGES.length-1){
+      const arr=document.createElement('div');
+      arr.className='flow-arrow';arr.textContent='→';
+      track.appendChild(arr);
+    }
+  });
+}
+renderFlow();
+
+// ── Run log data ──
+const PIPELINES=['audit_financial_etl','sales_snowflake_sync','kpi_powerbi_refresh','anomaly_detection_ml'];
+const STATUSES=[
+  {cls:'success',label:'✓ Success'},
+  {cls:'success',label:'✓ Success'},
+  {cls:'success',label:'✓ Success'},
+  {cls:'warning',label:'⚠ Warning'},
+  {cls:'failed', label:'✗ Failed'},
+];
+
+function fmtNum(n){return n.toLocaleString();}
+function fmtDur(s){return s>=60?Math.floor(s/60)+'m '+(s%60)+'s':s+'s';}
+
+function buildRunLog(){
+  const runs=[];
+  let base=Date.now()-600000;
+  for(let i=0;i<10;i++){
+    const rowsIn=Math.floor(800000+Math.random()*800000);
+    const drop=Math.floor(Math.random()*2000);
+    const dur=Math.floor(180+Math.random()*300);
+    const st=STATUSES[i===4?4:i===7?3:0];
+    runs.push({
+      id:'RUN-'+(1000+i),
+      pipeline:PIPELINES[i%4],
+      started:new Date(base).toLocaleTimeString('en-GB',{hour12:false}),
+      dur,rowsIn,rowsOut:rowsIn-drop,
+      status:st,maxDur:480
+    });
+    base-=Math.floor(Math.random()*3600000/10);
+  }
+  return runs;
+}
+
+function renderRunLog(){
+  const runs=buildRunLog();
+  const tbody=document.getElementById('run-log-body');
+  tbody.innerHTML=runs.map(r=>`
+    <tr>
+      <td class="mono" style="color:var(--muted);font-size:.72rem">${r.id}</td>
+      <td style="font-size:.78rem">${r.pipeline}</td>
+      <td class="mono" style="color:var(--muted);font-size:.72rem">${r.started}</td>
+      <td>
+        <div class="mono" style="font-size:.72rem">${fmtDur(r.dur)}</div>
+        <div class="duration-bar"><div class="duration-fill" style="width:${Math.min(r.dur/r.maxDur*100,100)}%"></div></div>
+      </td>
+      <td class="mono" style="font-size:.72rem">${fmtNum(r.rowsIn)}</td>
+      <td class="mono" style="font-size:.72rem">${fmtNum(r.rowsOut)}</td>
+      <td><span class="status-pill ${r.status.cls}">${r.status.label}</span></td>
+    </tr>
+  `).join('');
+}
+renderRunLog();
+
+// ── Charts ──
+const HOURS=Array.from({length:24},(_,i)=>i+':00');
+const rowData=HOURS.map(()=>Math.floor(80000+Math.random()*120000));
+const durData=Array.from({length:20},()=>Math.floor(180+Math.random()*300));
+
+const chartOpts={
+  responsive:true,
+  plugins:{legend:{display:false}},
+  scales:{
+    x:{ticks:{color:'#484f58',font:{family:'IBM Plex Mono',size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+    y:{ticks:{color:'#484f58',font:{family:'IBM Plex Mono',size:10}},grid:{color:'rgba(255,255,255,.04)'}}
+  }
+};
+
+new Chart(document.getElementById('rows-chart'),{
+  type:'bar',
+  data:{
+    labels:HOURS,
+    datasets:[{
+      data:rowData,
+      backgroundColor:rowData.map(v=>v>160000?'rgba(57,211,83,.5)':'rgba(57,211,83,.25)'),
+      borderColor:'rgba(57,211,83,.6)',
+      borderWidth:1,borderRadius:2
+    }]
+  },
+  options:{...chartOpts,scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>(v/1000).toFixed(0)+'k'}}}}
+});
+
+new Chart(document.getElementById('dur-chart'),{
+  type:'line',
+  data:{
+    labels:Array.from({length:20},(_,i)=>'R'+(i+1)),
+    datasets:[{
+      data:durData,
+      borderColor:'#58a6ff',
+      backgroundColor:'rgba(88,166,255,.08)',
+      borderWidth:1.5,fill:true,tension:.3,
+      pointRadius:3,pointBackgroundColor:'#58a6ff'
+    }]
+  },
+  options:{...chartOpts,scales:{...chartOpts.scales,y:{...chartOpts.scales.y,ticks:{...chartOpts.scales.y.ticks,callback:v=>Math.floor(v/60)+'m'+(v%60)+'s'}}}}
+});
+
+// ── Live terminal log ──
+const LOG_MESSAGES=[
+  {lvl:'INFO', msg:'Pipeline <span>audit_financial_etl</span> triggered — schedule: */5 * * * *'},
+  {lvl:'INFO', msg:'Connecting to <span>SQL Server</span> @ 10.0.0.12:1433 ...'},
+  {lvl:'OK',   msg:'Connection established — pool size: <span>8</span>'},
+  {lvl:'INFO', msg:'Extracting from <span>dbo.financial_transactions</span> WHERE date >= 2024-01-01'},
+  {lvl:'INFO', msg:'Fetched <span>1,284,201</span> rows in 12.4s'},
+  {lvl:'INFO', msg:'Running schema validation — <span>47</span> column checks'},
+  {lvl:'OK',   msg:'Schema valid — all constraints passed'},
+  {lvl:'INFO', msg:'Removing duplicates — key: <span>transaction_id + date</span>'},
+  {lvl:'OK',   msg:'Deduplicated: <span>2,308</span> rows removed'},
+  {lvl:'INFO', msg:'Applying business transforms — <span>23</span> rules loaded'},
+  {lvl:'INFO', msg:'Enriching with SAP reference data ...'},
+  {lvl:'WARN', msg:'SAP connection slow — retrying (<span>1/3</span>)'},
+  {lvl:'OK',   msg:'SAP enrichment complete — <span>99.4%</span> match rate'},
+  {lvl:'INFO', msg:'Loading to <span>Snowflake</span> PROD.AUDIT.FINANCIAL_FACTS'},
+  {lvl:'OK',   msg:'Snowflake COPY INTO complete — <span>1,281,893</span> rows'},
+  {lvl:'INFO', msg:'Updating pipeline metadata & lineage graph'},
+  {lvl:'OK',   msg:'Run <span>RUN-1010</span> complete — duration: <span>4m 07s</span>'},
+];
+
+let logIdx=0;
+const terminal=document.getElementById('terminal');
+
+function addLogLine(){
+  const entry=LOG_MESSAGES[logIdx%LOG_MESSAGES.length];
+  logIdx++;
+  const now=new Date().toLocaleTimeString('en-GB',{hour12:false});
+  const line=document.createElement('div');
+  line.className='log-line';
+  line.innerHTML=`
+    <span class="log-ts">${now}</span>
+    <span class="log-lvl ${entry.lvl}">[${entry.lvl}]</span>
+    <span class="log-msg">${entry.msg}</span>
+  `;
+  terminal.appendChild(line);
+  terminal.scrollTop=terminal.scrollHeight;
+  if(terminal.children.length>60)terminal.removeChild(terminal.firstChild);
+}
+
+// Seed initial lines
+for(let i=0;i<8;i++) addLogLine();
+setInterval(addLogLine, 1800);
+
+// ── Trigger run animation ──
+function triggerRun(){
+  const btn=event.target;
+  btn.textContent='⟳ Running…';
+  btn.disabled=true;
+  // reset stages
+  STAGES.forEach(s=>s.status='idle');
+  STAGES[0].status='running';
+  renderFlow();
+  let si=0;
+  const interval=setInterval(()=>{
+    if(si<STAGES.length){
+      if(si>0)STAGES[si-1].status='done';
+      if(si<STAGES.length)STAGES[si].status='running';
+      renderFlow(); si++;
+    } else {
+      STAGES[STAGES.length-1].status='done';
+      renderFlow();
+      clearInterval(interval);
+      btn.textContent='▶ Trigger Run';
+      btn.disabled=false;
+      renderRunLog();
+    }
+  },700);
+}
+
+// ── Pipeline selector ──
+function selectPipeline(name){
+  document.querySelectorAll('.pipeline-item').forEach(el=>el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ── Animate KPIs on load ──
+function animateCounter(el,target,suffix=''){
+  let curr=0;const step=target/60;
+  const iv=setInterval(()=>{
+    curr=Math.min(curr+step,target);
+    if(typeof target==='number'&&Number.isInteger(target)){
+      el.textContent=Math.floor(curr).toLocaleString()+suffix;
+    }
+    if(curr>=target)clearInterval(iv);
+  },16);
+}
+</script>
+</body>
+</html>

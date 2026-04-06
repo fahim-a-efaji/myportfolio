@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Financial Anomaly Detection — Fahim Al Efaji</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f9fc;--s1:#ffffff;--s2:#f3f4f8;--s3:#eaecf2;
+  --border:#dde1ec;--border2:#c8cdd9;
+  --text:#1a1d2e;--muted:#6b7289;--muted2:#9ba3be;
+  --blue:#2563eb;--blue2:#3b82f6;--blue-light:#eff6ff;
+  --red:#dc2626;--red-light:#fef2f2;
+  --green:#16a34a;--green-light:#f0fdf4;
+  --orange:#d97706;--orange-light:#fffbeb;
+  --purple:#7c3aed;--purple-light:#f5f3ff;
+  --font:'Outfit',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+
+/* Header */
+.header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
+}
+.header-left{display:flex;align-items:center;gap:1rem}
+.logo{font-size:1rem;font-weight:700;color:var(--text)}
+.logo span{color:var(--blue)}
+.hbadge{font-size:.65rem;padding:.2rem .6rem;border-radius:999px;font-family:var(--mono)}
+.hbadge.pbi{background:#f0e6ff;color:#7c3aed;border:1px solid #ddd6fe}
+.hbadge.py{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
+.hbadge.live{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;display:flex;align-items:center;gap:.3rem}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#16a34a;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.period-select{display:flex;gap:.3rem}
+.period-btn{
+  font-size:.75rem;padding:.3rem .75rem;border-radius:6px;cursor:pointer;
+  border:1px solid var(--border);background:transparent;color:var(--muted);
+  font-family:var(--font);transition:all .15s;
+}
+.period-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:1fr 300px;gap:1rem;padding:1rem;max-width:1400px;margin:0 auto}
+
+/* KPI cards */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1rem;grid-column:1/-1}
+.kpi{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;position:relative}
+.kpi-icon-wrap{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;margin-bottom:.6rem}
+.kpi-label{font-size:.72rem;color:var(--muted);font-weight:500;margin-bottom:.25rem}
+.kpi-val{font-size:1.7rem;font-weight:700;line-height:1}
+.kpi-delta{font-size:.72rem;margin-top:.3rem;display:flex;align-items:center;gap:.2rem}
+.up{color:var(--green)}.down{color:var(--red)}.neutral{color:var(--muted)}
+
+/* Main panel */
+.main-panel{display:flex;flex-direction:column;gap:1rem}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.card-header{
+  padding:.85rem 1.1rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-title{font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:.5rem}
+.card-title::before{content:'';width:3px;height:14px;border-radius:2px;background:var(--blue)}
+.card-body{padding:1rem 1.1rem}
+
+/* Anomaly table */
+.anomaly-table{width:100%;border-collapse:collapse}
+.anomaly-table th{
+  font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.07em;padding:.5rem .75rem;text-align:left;
+  border-bottom:2px solid var(--border);
+}
+.anomaly-table td{padding:.65rem .75rem;border-bottom:1px solid var(--border);font-size:.82rem}
+.anomaly-table tr:last-child td{border-bottom:none}
+.anomaly-table tr:hover td{background:var(--bg)}
+.severity{display:inline-flex;align-items:center;gap:.3rem;font-size:.68rem;font-weight:600;padding:.2rem .55rem;border-radius:4px;font-family:var(--mono)}
+.sev-high{background:var(--red-light);color:var(--red)}
+.sev-med{background:var(--orange-light);color:var(--orange)}
+.sev-low{background:var(--blue-light);color:var(--blue)}
+.zscore{font-family:var(--mono);font-size:.75rem;font-weight:500}
+.zscore.high{color:var(--red)}
+.zscore.med{color:var(--orange)}
+.trend-mini{display:flex;align-items:flex-end;gap:2px;height:24px}
+.tm-bar{width:6px;border-radius:2px 2px 0 0;background:var(--border2)}
+.tm-bar.spike{background:var(--red)}
+
+/* Right sidebar */
+.right-panel{display:flex;flex-direction:column;gap:1rem}
+.alert-item{
+  padding:.75rem;border-radius:8px;border-left:3px solid;margin-bottom:.5rem;
+  display:flex;gap:.65rem;align-items:flex-start;
+}
+.alert-item.high{background:var(--red-light);border-color:var(--red)}
+.alert-item.med{background:var(--orange-light);border-color:var(--orange)}
+.alert-item.low{background:var(--blue-light);border-color:var(--blue)}
+.alert-icon{font-size:1rem;flex-shrink:0;margin-top:.05rem}
+.alert-title{font-size:.78rem;font-weight:600}
+.alert-desc{font-size:.7rem;color:var(--muted);margin-top:.15rem;line-height:1.4}
+.alert-time{font-family:var(--mono);font-size:.62rem;color:var(--muted2);margin-top:.25rem}
+
+/* DAX badge */
+.dax-box{background:var(--purple-light);border:1px solid #ede9fe;border-radius:8px;padding:.85rem}
+.dax-title{font-size:.72rem;font-weight:600;color:var(--purple);margin-bottom:.5rem;font-family:var(--mono)}
+.dax-code{font-family:var(--mono);font-size:.68rem;color:#4c1d95;line-height:1.8;white-space:pre-wrap}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">Financial <span>Anomaly</span> Detection</div>
+    <span class="hbadge pbi">Power BI Concepts</span>
+    <span class="hbadge py">Python Z-Score</span>
+    <span class="hbadge live"><span class="live-dot"></span>Live</span>
+  </div>
+  <div class="period-select">
+    <button class="period-btn" onclick="setPeriod('1W',this)">1W</button>
+    <button class="period-btn active" onclick="setPeriod('1M',this)">1M</button>
+    <button class="period-btn" onclick="setPeriod('3M',this)">3M</button>
+    <button class="period-btn" onclick="setPeriod('YTD',this)">YTD</button>
+  </div>
+</div>
+
+<div style="max-width:1400px;margin:0 auto;padding:1rem">
+
+  <!-- KPI Row -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-icon-wrap" style="background:#dbeafe">💰</div>
+      <div class="kpi-label">Total Expenditure</div>
+      <div class="kpi-val" style="color:var(--blue)" id="kpi-exp">$84.2M</div>
+      <div class="kpi-delta up">▲ 3.1% vs prior period</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon-wrap" style="background:#fef2f2">⚠️</div>
+      <div class="kpi-label">Anomalies Detected</div>
+      <div class="kpi-val" style="color:var(--red)" id="kpi-anom">23</div>
+      <div class="kpi-delta down">▲ 5 new this week</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon-wrap" style="background:#f0fdf4">✅</div>
+      <div class="kpi-label">Audit Coverage</div>
+      <div class="kpi-val" style="color:var(--green)" id="kpi-cov">94.7%</div>
+      <div class="kpi-delta up">▲ 2.1% vs target</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon-wrap" style="background:#fffbeb">⏱</div>
+      <div class="kpi-label">Avg Detection Time</div>
+      <div class="kpi-val" style="color:var(--orange)" id="kpi-det">1.4 hrs</div>
+      <div class="kpi-delta up">▼ 40% faster (AI)</div>
+    </div>
+  </div>
+
+  <div class="layout" style="padding:0;grid-column:1/-1">
+
+    <!-- Main -->
+    <div class="main-panel">
+
+      <!-- Trend chart -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Expenditure Trend vs Baseline — Anomalies Flagged</div>
+          <span style="font-size:.72rem;color:var(--muted);font-family:var(--mono)">Z-score threshold: ±2.5σ</span>
+        </div>
+        <div class="card-body"><canvas id="trend-chart" height="160"></canvas></div>
+      </div>
+
+      <!-- By category -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Spend by Category</div></div>
+          <div class="card-body"><canvas id="cat-chart" height="180"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Anomaly Score Distribution</div></div>
+          <div class="card-body"><canvas id="zscore-chart" height="180"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Anomaly table -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Flagged Transactions</div>
+          <span style="font-size:.72rem;color:var(--red);font-family:var(--mono)">23 anomalies · review required</span>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="anomaly-table">
+            <thead>
+              <tr>
+                <th>Transaction ID</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Expected Range</th>
+                <th>Z-Score</th>
+                <th>Trend</th>
+                <th>Severity</th>
+                <th>Detected By</th>
+              </tr>
+            </thead>
+            <tbody id="anomaly-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Active Alerts</div></div>
+        <div class="card-body" id="alert-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">DAX Measure — Anomaly KPI</div></div>
+        <div class="card-body">
+          <div class="dax-box">
+            <div class="dax-title">// Power BI DAX</div>
+            <div class="dax-code">Anomaly Rate =
+DIVIDE(
+  CALCULATE(
+    COUNTROWS(Transactions),
+    Transactions[IsAnomaly] = TRUE
+  ),
+  COUNTROWS(Transactions),
+  0
+) * 100
+
+Z_Score =
+VAR _mean = AVERAGE(
+  Transactions[Amount])
+VAR _std = STDEV.P(
+  Transactions[Amount])
+RETURN
+DIVIDE(
+  Transactions[Amount] - _mean,
+  _std, 0
+)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Python Detection Logic</div></div>
+        <div class="card-body">
+          <div class="dax-box" style="background:#f0fdf4;border-color:#bbf7d0">
+            <div class="dax-title" style="color:var(--green)">// Python · pandas</div>
+            <div class="dax-code" style="color:#14532d">import pandas as pd
+from scipy import stats
+
+df['z_score'] = stats.zscore(
+  df['amount'])
+
+df['is_anomaly'] = (
+  df['z_score'].abs() > 2.5)
+
+anomalies = df[
+  df['is_anomaly']==True
+].sort_values(
+  'z_score',
+  ascending=False
+)</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data generation ──
+const CATEGORIES=['Travel & Expenses','Vendor Payments','Contractor Fees','IT Procurement','Facilities','Legal & Compliance','Marketing','R&D'];
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function rnd(a,b){return Math.random()*(b-a)+a;}
+function rndInt(a,b){return Math.floor(rnd(a,b));}
+
+// Trend data with anomaly spikes
+const baseline=Array.from({length:30},(_,i)=>850000+Math.sin(i/5)*50000+rnd(-30000,30000));
+const actual=baseline.map((v,i)=>{
+  if([7,14,22].includes(i)) return v*(1.35+rnd(0.1,0.3));
+  return v*(1+rnd(-0.05,0.08));
+});
+const anomalyPoints=actual.map((v,i)=>([7,14,22].includes(i)?v:null));
+
+const labels=Array.from({length:30},(_,i)=>`Day ${i+1}`);
+
+// Trend chart
+new Chart(document.getElementById('trend-chart'),{
+  type:'bar',
+  data:{
+    labels,
+    datasets:[
+      {type:'line',label:'Baseline',data:baseline,borderColor:'#3b82f6',borderWidth:1.5,borderDash:[4,3],fill:false,pointRadius:0,tension:.4},
+      {type:'bar',label:'Actual Spend',data:actual,backgroundColor:actual.map((v,i)=>[7,14,22].includes(i)?'rgba(220,38,38,.6)':'rgba(59,130,246,.25)'),borderWidth:0,borderRadius:2},
+      {type:'scatter',label:'Anomaly',data:anomalyPoints.map((v,i)=>v?{x:labels[i],y:v}:null).filter(Boolean),backgroundColor:'#dc2626',pointRadius:7,pointStyle:'triangle'},
+    ]
+  },
+  options:{
+    responsive:true,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{labels:{color:'#6b7289',boxWidth:12,font:{size:11}}}},
+    scales:{
+      x:{ticks:{color:'#9ba3be',font:{size:10},maxTicksLimit:10},grid:{display:false}},
+      y:{ticks:{color:'#9ba3be',font:{size:10},callback:v=>'$'+(v/1000).toFixed(0)+'K'},grid:{color:'rgba(0,0,0,.04)'}}
+    }
+  }
+});
+
+// Category chart
+const catData=CATEGORIES.map(()=>rndInt(5000000,25000000));
+new Chart(document.getElementById('cat-chart'),{
+  type:'bar',
+  data:{
+    labels:CATEGORIES.map(c=>c.length>14?c.slice(0,14)+'…':c),
+    datasets:[{
+      data:catData,
+      backgroundColor:['#3b82f6','#dc2626','#d97706','#16a34a','#7c3aed','#0891b2','#be185d','#65a30d'].map(c=>c+'99'),
+      borderRadius:4,borderWidth:0
+    }]
+  },
+  options:{
+    indexAxis:'y',responsive:true,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ticks:{color:'#9ba3be',font:{size:10},callback:v=>'$'+(v/1000000).toFixed(0)+'M'},grid:{color:'rgba(0,0,0,.04)'}},
+      y:{ticks:{color:'#6b7289',font:{size:11}},grid:{display:false}}
+    }
+  }
+});
+
+// Z-score distribution
+const zBins=['<-3','-3 to -2','-2 to -1','-1 to 0','0 to 1','1 to 2','2 to 3','>3'];
+const zData=[3,8,45,120,118,42,9,4];
+new Chart(document.getElementById('zscore-chart'),{
+  type:'bar',
+  data:{
+    labels:zBins,
+    datasets:[{
+      data:zData,
+      backgroundColor:zData.map((_,i)=>i<=1||i>=6?'rgba(220,38,38,.7)':'rgba(59,130,246,.35)'),
+      borderRadius:3,borderWidth:0
+    }]
+  },
+  options:{
+    responsive:true,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{ticks:{color:'#9ba3be',font:{size:10}},grid:{display:false}},
+      y:{ticks:{color:'#9ba3be',font:{size:10}},grid:{color:'rgba(0,0,0,.04)'}}
+    }
+  }
+});
+
+// Anomaly table
+const ANOMALIES=[
+  {id:'TXN-84921',cat:'Vendor Payments',amount:'$284,500',range:'$80K–$120K',z:4.2,sev:'high',by:'Python ML'},
+  {id:'TXN-71034',cat:'Contractor Fees',amount:'$198,000',range:'$40K–$80K',z:3.8,sev:'high',by:'Z-Score'},
+  {id:'TXN-92811',cat:'Travel & Expenses',amount:'$45,200',range:'$5K–$15K',z:3.1,sev:'high',by:'Python ML'},
+  {id:'TXN-60023',cat:'IT Procurement',amount:'$312,000',range:'$150K–$200K',z:2.9,sev:'med',by:'Rule-Based'},
+  {id:'TXN-55810',cat:'Legal & Compliance',amount:'$89,400',range:'$30K–$60K',z:2.7,sev:'med',by:'Z-Score'},
+  {id:'TXN-44102',cat:'Facilities',amount:'$67,800',range:'$20K–$45K',z:2.6,sev:'med',by:'Python ML'},
+  {id:'TXN-39920',cat:'Marketing',amount:'$156,000',range:'$80K–$120K',z:2.5,sev:'low',by:'DAX KPI'},
+];
+
+function sparkBars(spike){
+  const heights=[30,40,35,45,38,spike?100:42,40];
+  return heights.map((h,i)=>`<div class="tm-bar${i===5&&spike?' spike':''}" style="height:${h}%"></div>`).join('');
+}
+
+document.getElementById('anomaly-tbody').innerHTML=ANOMALIES.map(a=>`
+  <tr>
+    <td><span style="font-family:var(--mono);font-size:.72rem;color:var(--blue)">${a.id}</span></td>
+    <td>${a.cat}</td>
+    <td style="font-weight:600">${a.amount}</td>
+    <td style="font-family:var(--mono);font-size:.72rem;color:var(--muted)">${a.range}</td>
+    <td><span class="zscore ${a.sev==='high'?'high':a.sev==='med'?'med':''}">${a.z}σ</span></td>
+    <td><div class="trend-mini">${sparkBars(a.sev==='high'||a.sev==='med')}</div></td>
+    <td><span class="severity sev-${a.sev}">${a.sev.toUpperCase()}</span></td>
+    <td style="font-size:.72rem;color:var(--muted)">${a.by}</td>
+  </tr>
+`).join('');
+
+// Alerts
+const ALERTS=[
+  {type:'high',icon:'🔴',title:'Vendor Payment Spike',desc:'TXN-84921 is 4.2σ above mean. Requires CFO approval.',time:'12 min ago'},
+  {type:'high',icon:'🔴',title:'Duplicate Invoice Risk',desc:'3 invoices with identical amounts from different vendors.',time:'34 min ago'},
+  {type:'med',icon:'🟡',title:'Weekend Transaction',desc:'$198K processed Saturday 03:12 — unusual timing.',time:'2 hrs ago'},
+  {type:'low',icon:'🔵',title:'Budget Threshold 90%',desc:'Marketing category at 90% of monthly budget.',time:'4 hrs ago'},
+];
+document.getElementById('alert-list').innerHTML=ALERTS.map(a=>`
+  <div class="alert-item ${a.type}">
+    <div class="alert-icon">${a.icon}</div>
+    <div>
+      <div class="alert-title">${a.title}</div>
+      <div class="alert-desc">${a.desc}</div>
+      <div class="alert-time">${a.time}</div>
+    </div>
+  </div>
+`).join('');
+
+function setPeriod(p,btn){
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

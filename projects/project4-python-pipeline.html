@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Python Data Pipeline — Fahim Al Efaji</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1e1e2e;--s1:#24253a;--s2:#2a2b41;--s3:#32334c;
+  --border:#3d3f5c;--border2:#4a4c6a;
+  --text:#cdd6f4;--muted:#6c7086;--muted2:#45475a;
+  --blue:#89b4fa;--green:#a6e3a1;--yellow:#f9e2af;
+  --red:#f38ba8;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;
+  --mono:'Source Code Pro',monospace;--sans:'DM Sans',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+.topbar{background:var(--s1);border-bottom:1px solid var(--border);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:var(--mono);font-size:.95rem;color:var(--purple);font-weight:600}
+.badges{display:flex;gap:.5rem}
+.badge{font-family:var(--mono);font-size:.63rem;padding:.2rem .55rem;border-radius:3px;border:1px solid}
+.badge.py{background:rgba(169,126,247,.08);border-color:rgba(169,126,247,.3);color:var(--purple)}
+.badge.pd{background:rgba(137,180,250,.08);border-color:rgba(137,180,250,.3);color:var(--blue)}
+
+/* Main layout */
+.workspace{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 49px)}
+
+/* Code panel */
+.code-panel{background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.cp-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg)}
+.cp-tab{padding:.5rem .9rem;font-family:var(--mono);font-size:.68rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.cp-tab.active{color:var(--purple);border-color:var(--purple);background:var(--s1)}
+.code-editor{
+  flex:1;padding:1rem;font-family:var(--mono);font-size:.72rem;
+  line-height:1.9;overflow-y:auto;background:var(--s1);
+}
+.code-editor .kw{color:var(--purple)}
+.code-editor .fn{color:var(--blue)}
+.code-editor .str{color:var(--green)}
+.code-editor .cm{color:var(--muted)}
+.code-editor .dec{color:var(--yellow)}
+.code-editor .num{color:var(--orange)}
+.code-editor .cls{color:var(--teal)}
+.run-bar{padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;gap:.6rem;align-items:center}
+.run-btn{
+  background:rgba(166,227,161,.1);border:1px solid rgba(166,227,161,.3);
+  color:var(--green);font-family:var(--mono);font-size:.72rem;
+  padding:.4rem .9rem;border-radius:5px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:.4rem;
+}
+.run-btn:hover{background:rgba(166,227,161,.2)}
+.run-btn:disabled{opacity:.4;cursor:default}
+.step-btn{
+  background:rgba(137,180,250,.08);border:1px solid rgba(137,180,250,.2);
+  color:var(--blue);font-family:var(--mono);font-size:.68rem;
+  padding:.35rem .7rem;border-radius:5px;cursor:pointer;
+}
+
+/* Output panel */
+.output-panel{display:flex;flex-direction:column;overflow:hidden}
+.op-header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:.6rem 1.25rem;display:flex;align-items:center;justify-content:space-between;
+}
+.op-title{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.pipeline-steps{display:flex;gap:.4rem;align-items:center}
+.ps-step{
+  font-family:var(--mono);font-size:.62rem;padding:.2rem .55rem;
+  border-radius:3px;border:1px solid var(--border2);color:var(--muted2);
+  transition:all .3s;
+}
+.ps-step.done{border-color:rgba(166,227,161,.4);color:var(--green);background:rgba(166,227,161,.06)}
+.ps-step.running{border-color:rgba(137,180,250,.5);color:var(--blue);background:rgba(137,180,250,.08);animation:pulse-step .8s infinite}
+@keyframes pulse-step{0%,100%{opacity:1}50%{opacity:.6}}
+
+.op-content{flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}
+.stat{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.85rem}
+.stat-val{font-family:var(--mono);font-size:1.5rem;font-weight:600}
+.stat-label{font-size:.68rem;color:var(--muted);margin-top:.25rem}
+.stat-sub{font-family:var(--mono);font-size:.65rem;color:var(--muted2);margin-top:.2rem}
+
+/* Output tables */
+.out-section{background:var(--s2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.out-sec-head{padding:.55rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.out-sec-title{font-family:var(--mono);font-size:.72rem;color:var(--purple)}
+.out-sec-meta{font-family:var(--mono);font-size:.62rem;color:var(--muted)}
+.df-table{width:100%;border-collapse:collapse}
+.df-table th{background:var(--s3);padding:.42rem .75rem;text-align:left;font-family:var(--mono);font-size:.63rem;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+.df-table td{padding:.38rem .75rem;font-family:var(--mono);font-size:.7rem;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap}
+.df-table tr:last-child td{border-bottom:none}
+.dtype{font-size:.6rem;color:var(--muted2)}
+.null-cell{color:var(--muted2);font-style:italic}
+.highlight-cell{color:var(--yellow)}
+.error-cell{color:var(--red)}
+.ok-cell{color:var(--green)}
+
+/* Terminal */
+.terminal{
+  background:#11111b;border:1px solid var(--border);border-radius:8px;
+  padding:1rem;font-family:var(--mono);font-size:.7rem;line-height:1.8;
+  max-height:180px;overflow-y:auto;
+}
+.tl{display:flex;gap:.6rem}
+.ts{color:var(--muted2);flex-shrink:0;font-size:.63rem}
+.tp{color:var(--purple);flex-shrink:0}
+.tm{color:var(--muted)}
+.tm .hl{color:var(--text)}
+.tm .ok{color:var(--green)}
+.tm .warn{color:var(--yellow)}
+.tm .err{color:var(--red)}
+
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">⬡ Python Data Pipeline — Live Output</div>
+  <div class="badges">
+    <span class="badge py">Python 3.11</span>
+    <span class="badge pd">pandas · numpy · scipy</span>
+  </div>
+</div>
+
+<div class="workspace">
+
+  <!-- Code Panel -->
+  <div class="code-panel">
+    <div class="cp-tabs">
+      <div class="cp-tab active" onclick="showCode('extract',this)">extract.py</div>
+      <div class="cp-tab" onclick="showCode('transform',this)">transform.py</div>
+      <div class="cp-tab" onclick="showCode('validate',this)">validate.py</div>
+      <div class="cp-tab" onclick="showCode('load',this)">load.py</div>
+    </div>
+    <div class="code-editor" id="code-display"></div>
+    <div class="run-bar">
+      <button class="run-btn" id="run-btn" onclick="runPipeline()">▶ Run Pipeline</button>
+      <button class="step-btn" onclick="stepNext()">Step →</button>
+      <span style="font-family:var(--mono);font-size:.65rem;color:var(--muted)" id="step-label">Ready</span>
+    </div>
+  </div>
+
+  <!-- Output Panel -->
+  <div class="output-panel">
+    <div class="op-header">
+      <div class="op-title">Pipeline Output — audit_financial_2024.csv</div>
+      <div class="pipeline-steps">
+        <div class="ps-step" id="ps-0">Extract</div>
+        <span style="color:var(--muted2);font-size:.7rem">›</span>
+        <div class="ps-step" id="ps-1">Validate</div>
+        <span style="color:var(--muted2);font-size:.7rem">›</span>
+        <div class="ps-step" id="ps-2">Transform</div>
+        <span style="color:var(--muted2);font-size:.7rem">›</span>
+        <div class="ps-step" id="ps-3">Enrich</div>
+        <span style="color:var(--muted2);font-size:.7rem">›</span>
+        <div class="ps-step" id="ps-4">Load</div>
+      </div>
+    </div>
+    <div class="op-content">
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-val" style="color:var(--blue)" id="st-rows">—</div>
+          <div class="stat-label">Rows Loaded</div>
+          <div class="stat-sub" id="st-rows-sub">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" style="color:var(--red)" id="st-nulls">—</div>
+          <div class="stat-label">Nulls Removed</div>
+          <div class="stat-sub" id="st-nulls-sub">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" style="color:var(--yellow)" id="st-dupes">—</div>
+          <div class="stat-label">Duplicates Dropped</div>
+          <div class="stat-sub" id="st-dupes-sub">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-val" style="color:var(--green)" id="st-anom">—</div>
+          <div class="stat-label">Anomalies Flagged</div>
+          <div class="stat-sub" id="st-anom-sub">—</div>
+        </div>
+      </div>
+
+      <!-- df.info() output -->
+      <div class="out-section" id="section-info" style="display:none">
+        <div class="out-sec-head">
+          <div class="out-sec-title">df.info() · df.describe()</div>
+          <div class="out-sec-meta" id="info-meta">—</div>
+        </div>
+        <div style="padding:.75rem 1rem">
+          <table class="df-table" id="info-table"></table>
+        </div>
+      </div>
+
+      <!-- Data preview -->
+      <div class="out-section" id="section-preview" style="display:none">
+        <div class="out-sec-head">
+          <div class="out-sec-title">df.head(10) — Transformed Output</div>
+          <div class="out-sec-meta" id="preview-meta">—</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="df-table" id="preview-table"></table>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem" id="section-charts" style="display:none">
+        <div class="out-section">
+          <div class="out-sec-head"><div class="out-sec-title">Amount Distribution</div></div>
+          <div style="padding:.75rem"><canvas id="hist-chart" height="160"></canvas></div>
+        </div>
+        <div class="out-section">
+          <div class="out-sec-head"><div class="out-sec-title">Spend by Category</div></div>
+          <div style="padding:.75rem"><canvas id="cat-chart" height="160"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Terminal -->
+      <div class="terminal" id="terminal"></div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CODES={
+  extract:`<span class="cm"># extract.py — Pull from SQL Server + CSV fallback</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> pyodbc, logging
+<span class="kw">from</span> datetime <span class="kw">import</span> datetime
+
+logging.basicConfig(level=logging.INFO,
+    format=<span class="str">'%(asctime)s [%(levelname)s] %(message)s'</span>)
+
+<span class="kw">class</span> <span class="cls">DataExtractor</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, conn_str: str):
+        self.conn_str = conn_str
+        self.logger = logging.getLogger(<span class="fn">__name__</span>)
+
+    <span class="kw">def</span> <span class="fn">extract</span>(self, table: str,
+                  date_from: str) -> pd.DataFrame:
+        <span class="str">"""Extract financial transactions."""</span>
+        query = <span class="str">f"""
+            SELECT transaction_id, vendor_id,
+                   category, amount, currency,
+                   transaction_date, cost_center,
+                   approver_id, sap_document_no
+            FROM {table}
+            WHERE transaction_date >= '{date_from}'
+              AND is_deleted = 0
+            ORDER BY transaction_date DESC
+        """</span>
+        self.logger.info(
+            <span class="str">f"Extracting from {table}..."</span>)
+        conn = pyodbc.<span class="fn">connect</span>(self.conn_str)
+        df = pd.<span class="fn">read_sql</span>(query, conn)
+        self.logger.info(
+            <span class="str">f"Extracted {len(df):,} rows"</span>)
+        <span class="kw">return</span> df`,
+
+  transform:`<span class="cm"># transform.py — Clean, enrich, compute features</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">from</span> scipy <span class="kw">import</span> stats
+
+<span class="kw">class</span> <span class="cls">DataTransformer</span>:
+
+    <span class="kw">def</span> <span class="fn">clean</span>(self, df: pd.DataFrame) -> pd.DataFrame:
+        <span class="str">"""Remove nulls, duplicates, fix types."""</span>
+        initial_rows = <span class="fn">len</span>(df)
+
+        <span class="cm"># Drop nulls in critical columns</span>
+        df = df.<span class="fn">dropna</span>(subset=[<span class="str">'amount'</span>,
+                                <span class="str">'vendor_id'</span>,
+                                <span class="str">'transaction_date'</span>])
+
+        <span class="cm"># Remove duplicates on business key</span>
+        df = df.<span class="fn">drop_duplicates</span>(
+            subset=[<span class="str">'transaction_id'</span>])
+
+        <span class="cm"># Fix types</span>
+        df[<span class="str">'amount'</span>] = pd.<span class="fn">to_numeric</span>(
+            df[<span class="str">'amount'</span>], errors=<span class="str">'coerce'</span>)
+        df[<span class="str">'transaction_date'</span>] = pd.<span class="fn">to_datetime</span>(
+            df[<span class="str">'transaction_date'</span>])
+        <span class="kw">return</span> df
+
+    <span class="kw">def</span> <span class="fn">compute_zscore</span>(self,
+            df: pd.DataFrame) -> pd.DataFrame:
+        <span class="str">"""Flag anomalies using Z-score per category."""</span>
+        df[<span class="str">'z_score'</span>] = df.<span class="fn">groupby</span>(
+            <span class="str">'category'</span>)[<span class="str">'amount'</span>].<span class="fn">transform</span>(
+            <span class="kw">lambda</span> x: stats.<span class="fn">zscore</span>(x))
+        df[<span class="str">'is_anomaly'</span>] = df[<span class="str">'z_score'</span>].<span class="fn">abs</span>() > <span class="num">2.5</span>
+        <span class="kw">return</span> df`,
+
+  validate:`<span class="cm"># validate.py — Schema & business rule checks</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass
+<span class="kw">from</span> typing <span class="kw">import</span> List
+
+<span class="dec">@dataclass</span>
+<span class="kw">class</span> <span class="cls">ValidationResult</span>:
+    passed: bool
+    rule_name: str
+    failed_rows: int
+    message: str
+
+<span class="kw">class</span> <span class="cls">DataValidator</span>:
+    <span class="str">"""Business rule validation engine."""</span>
+
+    <span class="kw">def</span> <span class="fn">validate_all</span>(self,
+            df: pd.DataFrame) -> List[ValidationResult]:
+        results = []
+
+        <span class="cm"># Rule 1: No negative amounts</span>
+        neg = (df[<span class="str">'amount'</span>] < <span class="num">0</span>).<span class="fn">sum</span>()
+        results.<span class="fn">append</span>(<span class="cls">ValidationResult</span>(
+            passed=neg == <span class="num">0</span>,
+            rule_name=<span class="str">"no_negative_amounts"</span>,
+            failed_rows=<span class="fn">int</span>(neg),
+            message=<span class="str">f"{neg} negative amounts found"</span>
+        ))
+
+        <span class="cm"># Rule 2: Amount within bounds</span>
+        over = (df[<span class="str">'amount'</span>] > <span class="num">1_000_000</span>).<span class="fn">sum</span>()
+        results.<span class="fn">append</span>(<span class="cls">ValidationResult</span>(
+            passed=over == <span class="num">0</span>,
+            rule_name=<span class="str">"amount_ceiling"</span>,
+            failed_rows=<span class="fn">int</span>(over),
+            message=<span class="str">f"{over} exceed $1M ceiling"</span>
+        ))
+
+        <span class="cm"># Rule 3: Valid cost centers</span>
+        valid_cc = [<span class="str">'CC001'</span>,<span class="str">'CC002'</span>,<span class="str">'CC003'</span>]
+        invalid = (~df[<span class="str">'cost_center'</span>].<span class="fn">isin</span>(valid_cc)).<span class="fn">sum</span>()
+        results.<span class="fn">append</span>(<span class="cls">ValidationResult</span>(
+            passed=invalid == <span class="num">0</span>,
+            rule_name=<span class="str">"valid_cost_center"</span>,
+            failed_rows=<span class="fn">int</span>(invalid),
+            message=<span class="str">f"{invalid} invalid cost centers"</span>
+        ))
+        <span class="kw">return</span> results`,
+
+  load:`<span class="cm"># load.py — Write to Snowflake DW</span>
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">from</span> snowflake.connector.pandas_tools <span class="kw">import</span> write_pandas
+<span class="kw">import</span> snowflake.connector, logging
+
+<span class="kw">class</span> <span class="cls">SnowflakeLoader</span>:
+    <span class="str">"""Load transformed data to Snowflake DW."""</span>
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, config: dict):
+        self.conn = snowflake.connector.<span class="fn">connect</span>(
+            account=config[<span class="str">'account'</span>],
+            user=config[<span class="str">'user'</span>],
+            password=config[<span class="str">'password'</span>],
+            warehouse=config[<span class="str">'warehouse'</span>],
+            database=<span class="str">'PROD_DW'</span>,
+            schema=<span class="str">'AUDIT'</span>
+        )
+
+    <span class="kw">def</span> <span class="fn">load</span>(self, df: pd.DataFrame,
+               table: str) -> dict:
+        success, nchunks, nrows, _ = <span class="fn">write_pandas</span>(
+            conn=self.conn,
+            df=df,
+            table_name=table,
+            auto_create_table=<span class="kw">False</span>,
+            overwrite=<span class="kw">False</span>
+        )
+        <span class="kw">return</span> {
+            <span class="str">"rows_loaded"</span>: nrows,
+            <span class="str">"chunks"</span>: nchunks,
+            <span class="str">"success"</span>: success
+        }`
+};
+
+function showCode(name,el){
+  document.querySelectorAll('.cp-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('code-display').innerHTML=CODES[name];
+}
+showCode('extract',document.querySelector('.cp-tab'));
+
+// ── Simulated pipeline ──
+const PIPELINE_STEPS=[
+  {
+    name:'Extract',label:'ps-0',delay:600,
+    action:()=>{
+      addLog('INFO','Connecting to SQL Server @ 10.0.0.12:1433');
+      addLog('OK',  'Connection established (pool_size=8)');
+      addLog('INFO','Executing query on dbo.financial_transactions');
+      addLog('INFO','Fetched <hl>52,840 rows</hl> in 4.2s');
+      showInfoTable();
+    }
+  },
+  {
+    name:'Validate',label:'ps-1',delay:900,
+    action:()=>{
+      addLog('INFO','Running schema validation — <hl>47 column checks</hl>');
+      addLog('OK',  'Schema valid ✓');
+      addLog('INFO','Business rules: no_negative_amounts → <ok>PASS</ok>');
+      addLog('WARN','amount_ceiling: <warn>3 rows</warn> exceed $1M — flagging');
+      addLog('OK',  'Validation complete — <hl>52,840 rows</hl> pass');
+    }
+  },
+  {
+    name:'Transform',label:'ps-2',delay:1000,
+    action:()=>{
+      addLog('INFO','Removing nulls: <hl>amount, vendor_id, date</hl>');
+      addLog('OK',  'Dropped <warn>284 null rows</warn>');
+      addLog('INFO','Deduplication on transaction_id');
+      addLog('OK',  'Dropped <warn>112 duplicate rows</warn>');
+      addLog('INFO','Computing Z-score per category group');
+      addLog('OK',  'Flagged <warn>23 anomalies</warn> (|z| > 2.5σ)');
+      setStats();
+      showPreview();
+      showCharts();
+    }
+  },
+  {
+    name:'Enrich',label:'ps-3',delay:700,
+    action:()=>{
+      addLog('INFO','Joining SAP vendor master reference data');
+      addLog('OK',  'Enriched: <hl>52,444 rows matched</hl> (99.4%)');
+      addLog('WARN','<warn>52 rows</warn> — vendor not in SAP master');
+      addLog('INFO','Adding fiscal_quarter, fiscal_year columns');
+      addLog('OK',  'Enrichment complete');
+    }
+  },
+  {
+    name:'Load',label:'ps-4',delay:800,
+    action:()=>{
+      addLog('INFO','Connecting to Snowflake PROD_DW.AUDIT');
+      addLog('OK',  'COPY INTO FACT_FINANCIAL_TRANSACTIONS');
+      addLog('OK',  '<hl>52,444 rows</hl> loaded in 3 chunks (22.1s)');
+      addLog('INFO','Updating pipeline metadata & run log');
+      addLog('OK',  '✓ Pipeline complete — duration: <hl>9m 14s</hl>');
+      document.getElementById('run-btn').disabled=false;
+      document.getElementById('step-label').textContent='Complete ✓';
+    }
+  }
+];
+
+let stepIdx=0;
+let running=false;
+let stepTimer=null;
+
+function runPipeline(){
+  if(running)return;
+  running=true;
+  stepIdx=0;
+  document.getElementById('run-btn').disabled=true;
+  document.getElementById('terminal').innerHTML='';
+  document.getElementById('section-info').style.display='none';
+  document.getElementById('section-preview').style.display='none';
+  document.getElementById('section-charts').style.display='none';
+  document.querySelectorAll('.ps-step').forEach(s=>{s.className='ps-step';});
+  ['st-rows','st-nulls','st-dupes','st-anom'].forEach(id=>{document.getElementById(id).textContent='—';});
+  showCode('extract',document.querySelectorAll('.cp-tab')[0]);
+  runNextStep();
+}
+
+function runNextStep(){
+  if(stepIdx>=PIPELINE_STEPS.length)return;
+  const step=PIPELINE_STEPS[stepIdx];
+  document.getElementById(step.label).className='ps-step running';
+  document.getElementById('step-label').textContent=step.name+'…';
+  const codeFile=['extract','transform','validate','load'];
+  if(codeFile[stepIdx]){
+    const tabs=document.querySelectorAll('.cp-tab');
+    showCode(codeFile[Math.min(stepIdx,3)],tabs[Math.min(stepIdx,3)]);
+  }
+  stepTimer=setTimeout(()=>{
+    document.getElementById(step.label).className='ps-step done';
+    step.action();
+    stepIdx++;
+    if(stepIdx<PIPELINE_STEPS.length){
+      stepTimer=setTimeout(runNextStep,400);
+    } else {running=false;}
+  },step.delay);
+}
+
+function stepNext(){
+  if(running)return;
+  if(stepIdx===0){
+    document.getElementById('terminal').innerHTML='';
+    document.querySelectorAll('.ps-step').forEach(s=>{s.className='ps-step';});
+  }
+  if(stepIdx>=PIPELINE_STEPS.length){stepIdx=0;return;}
+  const step=PIPELINE_STEPS[stepIdx];
+  document.getElementById(step.label).className='ps-step running';
+  setTimeout(()=>{
+    document.getElementById(step.label).className='ps-step done';
+    step.action();
+    stepIdx++;
+    document.getElementById('step-label').textContent=stepIdx+'/'+PIPELINE_STEPS.length;
+  },300);
+}
+
+// ── Terminal ──
+const terminal=document.getElementById('terminal');
+function addLog(level,msg){
+  const now=new Date().toLocaleTimeString('en-GB',{hour12:false});
+  const colors={INFO:'color:var(--blue)',OK:'color:var(--green)',WARN:'color:var(--yellow)',ERROR:'color:var(--red)'};
+  const line=document.createElement('div');
+  line.className='tl';
+  line.innerHTML=`<span class="ts">${now}</span><span class="tp" style="${colors[level]}">[${level}]</span><span class="tm">${msg.replace(/<hl>(.*?)<\/hl>/g,'<span class="hl">$1</span>').replace(/<ok>(.*?)<\/ok>/g,'<span class="ok">$1</span>').replace(/<warn>(.*?)<\/warn>/g,'<span class="warn">$1</span>')}</span>`;
+  terminal.appendChild(line);
+  terminal.scrollTop=terminal.scrollHeight;
+}
+
+// ── Stats ──
+function setStats(){
+  document.getElementById('st-rows').textContent='52,444';
+  document.getElementById('st-rows-sub').textContent='of 52,840 extracted';
+  document.getElementById('st-nulls').textContent='284';
+  document.getElementById('st-nulls-sub').textContent='0.54% of rows';
+  document.getElementById('st-dupes').textContent='112';
+  document.getElementById('st-dupes-sub').textContent='on transaction_id';
+  document.getElementById('st-anom').textContent='23';
+  document.getElementById('st-anom-sub').textContent='|z-score| > 2.5σ';
+}
+
+// ── Info table ──
+function showInfoTable(){
+  document.getElementById('section-info').style.display='block';
+  document.getElementById('info-meta').textContent='52,840 rows × 9 columns';
+  const cols=[
+    {col:'transaction_id',dtype:'object',nonNull:'52,840',unique:'52,721',mean:'—',std:'—'},
+    {col:'amount',dtype:'float64',nonNull:'52,556',unique:'48,201',mean:'$24,810',std:'$18,420'},
+    {col:'category',dtype:'object',nonNull:'52,840',unique:'8',mean:'—',std:'—'},
+    {col:'vendor_id',dtype:'object',nonNull:'52,556',unique:'1,284',mean:'—',std:'—'},
+    {col:'transaction_date',dtype:'datetime64',nonNull:'52,840',unique:'365',mean:'2024-06-14',std:'±180d'},
+    {col:'cost_center',dtype:'object',nonNull:'52,840',unique:'42',mean:'—',std:'—'},
+    {col:'z_score',dtype:'float64',nonNull:'52,444',unique:'—',mean:'0.001',std:'1.002'},
+    {col:'is_anomaly',dtype:'bool',nonNull:'52,444',unique:'2',mean:'0.044%','std':'—'},
+  ];
+  document.getElementById('info-table').innerHTML=`
+    <thead><tr><th>column</th><th>dtype</th><th>non-null</th><th>unique</th><th>mean</th><th>std</th></tr></thead>
+    <tbody>${cols.map(c=>`<tr>
+      <td style="color:var(--blue)">${c.col}</td>
+      <td><span class="dtype">${c.dtype}</span></td>
+      <td>${c.nonNull}</td><td>${c.unique}</td>
+      <td>${c.mean}</td><td>${c.std}</td>
+    </tr>`).join('')}</tbody>`;
+}
+
+// ── Preview table ──
+function showPreview(){
+  document.getElementById('section-preview').style.display='block';
+  document.getElementById('preview-meta').textContent='10 of 52,444 rows · 11 columns';
+  const rows=[
+    ['TXN-84921','Vendor Payments','$284,500','2024-03-15','CC001','Acme Corp','4.231','true','Q1-2024'],
+    ['TXN-71034','Contractor Fees','$198,000','2024-04-02','CC002','Deloitte','3.821','true','Q2-2024'],
+    ['TXN-12301','Travel Expenses','$4,200','2024-01-08','CC001','Various','0.182','false','Q1-2024'],
+    ['TXN-12302','IT Procurement','$82,000','2024-01-09','CC003','IBM','0.912','false','Q1-2024'],
+    ['TXN-92811','Travel Expenses','$45,200','2024-05-21','CC001','Various','3.108','true','Q2-2024'],
+    ['TXN-12305','Vendor Payments','$91,400','2024-01-12','CC002','SAP SE','0.421','false','Q1-2024'],
+    ['TXN-12306','Facilities','$28,100','2024-01-14','CC003','JLL','−0.210','false','Q1-2024'],
+    ['TXN-60023','IT Procurement','$312,000','2024-02-20','CC002','Microsoft','2.910','true','Q1-2024'],
+    ['TXN-12310','Legal','$18,900','2024-01-18','CC001','Baker McKenzie','−0.105','false','Q1-2024'],
+    ['TXN-12311','Marketing','$62,400','2024-01-20','CC003','WPP Group','0.344','false','Q1-2024'],
+  ];
+  const hdrs=['transaction_id','category','amount','date','cost_center','vendor','z_score','is_anomaly','fiscal_qtr'];
+  document.getElementById('preview-table').innerHTML=`
+    <thead><tr>${hdrs.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${r.map((v,i)=>{
+      if(i===7)return`<td class="${v==='true'?'error-cell':'ok-cell'}">${v}</td>`;
+      if(i===6&&Math.abs(parseFloat(v))>2.5)return`<td class="highlight-cell">${v}</td>`;
+      return`<td>${v}</td>`;
+    }).join('')}</tr>`).join('')}</tbody>`;
+}
+
+// ── Charts ──
+let hChart,cChart;
+function showCharts(){
+  document.getElementById('section-charts').style.display='grid';
+  const amounts=[0,5,10,20,30,50,80,120,200,300,400];
+  const counts=[280,1840,8920,14200,12100,8400,4200,1820,820,240,23];
+  if(hChart)hChart.destroy();
+  hChart=new Chart(document.getElementById('hist-chart'),{
+    type:'bar',
+    data:{labels:amounts.map(a=>'$'+a+'K'),datasets:[{data:counts,backgroundColor:counts.map((c,i)=>i===10?'rgba(243,139,168,.7)':'rgba(137,180,250,.4)'),borderWidth:0,borderRadius:2}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6c7086',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#6c7086',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}}}
+  });
+  const cats=['Vendor Pay','Contractor','Travel','IT Proc','Facilities','Legal','Marketing','R&D'];
+  const catAmts=[18400000,12100000,8200000,14200000,5800000,4100000,6900000,3200000];
+  if(cChart)cChart.destroy();
+  cChart=new Chart(document.getElementById('cat-chart'),{
+    type:'doughnut',
+    data:{labels:cats,datasets:[{data:catAmts,backgroundColor:['rgba(137,180,250,.7)','rgba(203,166,247,.7)','rgba(166,227,161,.7)','rgba(249,226,175,.7)','rgba(148,226,213,.7)','rgba(243,139,168,.7)','rgba(250,179,135,.7)','rgba(180,190,254,.7)'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#cdd6f4',boxWidth:10,font:{size:11}}}}}
+  });
+}
+</script>
+</body>
+</html>

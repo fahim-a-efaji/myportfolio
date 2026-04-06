@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>CI/CD Pipeline Visualizer — Fahim Al Efaji</title>
+<link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--s1:#161b27;--s2:#1c2333;--s3:#222d42;
+  --border:#253048;--border2:#2e3d5a;
+  --text:#e2e8f0;--muted:#7890b2;--muted2:#3d5278;
+  --blue:#4c9aff;--green:#57d9a3;--red:#ff5630;
+  --orange:#ff8b00;--purple:#998dd9;--cyan:#00c7e6;
+  --yellow:#f8e71c;
+  --mono:'Azeret Mono',monospace;--sans:'Manrope',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;overflow-x:hidden}
+
+/* Header */
+.header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
+}
+.logo{font-family:var(--mono);font-size:.9rem;color:var(--cyan)}
+.hbadges{display:flex;gap:.5rem}
+.hb{font-family:var(--mono);font-size:.63rem;padding:.18rem .5rem;border-radius:3px;border:1px solid}
+.hb.gh{background:rgba(76,154,255,.07);border-color:rgba(76,154,255,.25);color:var(--blue)}
+.hb.az{background:rgba(0,199,230,.07);border-color:rgba(0,199,230,.25);color:var(--cyan)}
+
+/* Main */
+.main{padding:1.25rem;max-width:1300px;margin:0 auto;display:flex;flex-direction:column;gap:1.25rem}
+
+/* Trigger bar */
+.trigger-bar{
+  background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;
+}
+.trigger-info{display:flex;align-items:center;gap:1rem}
+.commit-hash{font-family:var(--mono);font-size:.72rem;color:var(--cyan);background:rgba(0,199,230,.08);border:1px solid rgba(0,199,230,.2);border-radius:4px;padding:.2rem .5rem}
+.branch-badge{font-family:var(--mono);font-size:.7rem;color:var(--muted);background:var(--s3);border:1px solid var(--border);border-radius:4px;padding:.18rem .5rem}
+.trigger-btns{display:flex;gap:.6rem}
+.tbtn{font-family:var(--mono);font-size:.72rem;padding:.42rem 1rem;border-radius:6px;cursor:pointer;border:1px solid;transition:all .2s}
+.tbtn.primary{background:rgba(87,217,163,.1);border-color:rgba(87,217,163,.3);color:var(--green)}
+.tbtn.primary:hover{background:rgba(87,217,163,.2)}
+.tbtn.danger{background:rgba(255,86,48,.07);border-color:rgba(255,86,48,.2);color:var(--red)}
+
+/* Pipeline canvas */
+.pipeline-canvas{
+  background:var(--s1);border:1px solid var(--border);border-radius:10px;
+  padding:1.5rem;position:relative;overflow-x:auto;
+}
+.pipeline-track{display:flex;align-items:flex-start;gap:0;min-width:900px}
+
+/* Stage */
+.stage{position:relative;display:flex;flex-direction:column;align-items:center;min-width:150px}
+.stage-connector{
+  position:absolute;top:28px;left:100%;width:calc(100% - 80px);
+  height:1px;background:var(--border2);z-index:0;
+  transition:background .4s;
+}
+.stage-connector.active{background:var(--green);box-shadow:0 0 8px rgba(87,217,163,.4)}
+.stage-connector.running{background:var(--blue)}
+.stage-connector.failed{background:var(--red)}
+.stage:last-child .stage-connector{display:none}
+
+.stage-box{
+  width:110px;height:58px;border-radius:10px;border:1px solid var(--border2);
+  background:var(--s2);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;cursor:pointer;transition:all .25s;position:relative;
+  overflow:hidden;z-index:1;
+}
+.stage-box::before{
+  content:'';position:absolute;inset:0;opacity:0;
+  transition:opacity .3s;
+}
+.stage-box:hover{transform:translateY(-2px);border-color:var(--border)}
+.stage-box.idle{}
+.stage-box.running{border-color:var(--blue);background:rgba(76,154,255,.06)}
+.stage-box.running::before{background:linear-gradient(90deg,transparent,rgba(76,154,255,.12),transparent);opacity:1;animation:shimmer 1.2s infinite}
+.stage-box.success{border-color:rgba(87,217,163,.4);background:rgba(87,217,163,.05)}
+.stage-box.failed{border-color:rgba(255,86,48,.4);background:rgba(255,86,48,.05)}
+.stage-box.skipped{opacity:.45}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+
+.stage-icon{font-size:1.2rem;margin-bottom:.2rem}
+.stage-name{font-family:var(--mono);font-size:.65rem;font-weight:500;text-align:center}
+.stage-status{font-family:var(--mono);font-size:.58rem;margin-top:.15rem}
+.stage-status.ok{color:var(--green)}
+.stage-status.run{color:var(--blue)}
+.stage-status.fail{color:var(--red)}
+.stage-status.idle{color:var(--muted2)}
+
+.stage-label{font-family:var(--mono);font-size:.6rem;color:var(--muted2);margin-top:.4rem;text-align:center}
+.stage-dur{font-family:var(--mono);font-size:.62rem;color:var(--muted);margin-top:.15rem}
+
+/* Jobs breakdown */
+.jobs-panel{
+  background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;
+}
+.jp-header{padding:.75rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.jp-title{font-family:var(--mono);font-size:.72rem;color:var(--cyan)}
+.jp-meta{font-family:var(--mono);font-size:.65rem;color:var(--muted)}
+.job-item{
+  display:flex;align-items:center;gap:1rem;padding:.65rem 1.1rem;
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.job-item:last-child{border-bottom:none}
+.job-item:hover{background:rgba(255,255,255,.02)}
+.ji-icon{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;flex-shrink:0}
+.ji-icon.ok{background:rgba(87,217,163,.15);color:var(--green)}
+.ji-icon.run{background:rgba(76,154,255,.15);color:var(--blue)}
+.ji-icon.fail{background:rgba(255,86,48,.15);color:var(--red)}
+.ji-icon.idle{background:var(--s3);color:var(--muted2)}
+.ji-name{font-size:.8rem;flex:1}
+.ji-stage{font-family:var(--mono);font-size:.62rem;color:var(--muted);width:80px}
+.ji-runner{font-family:var(--mono);font-size:.62rem;color:var(--muted2);width:110px}
+.ji-dur{font-family:var(--mono);font-size:.65rem;color:var(--muted);width:60px;text-align:right}
+.progress-wrap{width:100px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;transition:width 1s}
+
+/* Logs panel */
+.logs-panel{background:var(--s2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.lp-header{padding:.65rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.lp-title{font-family:var(--mono);font-size:.72rem;color:var(--cyan)}
+.log-terminal{
+  background:#090c12;padding:1rem;font-family:var(--mono);
+  font-size:.7rem;line-height:1.75;height:220px;overflow-y:auto;
+}
+.ll{display:flex;gap:.75rem;padding:.06rem 0}
+.ll-ts{color:var(--muted2);flex-shrink:0;font-size:.62rem}
+.ll-stage{font-size:.62rem;padding:.04rem .3rem;border-radius:2px;flex-shrink:0}
+.ll-stage.build{background:rgba(76,154,255,.15);color:var(--blue)}
+.ll-stage.test{background:rgba(153,141,217,.15);color:var(--purple)}
+.ll-stage.deploy{background:rgba(87,217,163,.15);color:var(--green)}
+.ll-stage.scan{background:rgba(255,139,0,.15);color:var(--orange)}
+.ll-msg{color:var(--muted)}
+.ll-msg .hl{color:var(--text)}
+.ll-msg .ok{color:var(--green)}
+.ll-msg .err{color:var(--red)}
+.ll-msg .warn{color:var(--orange)}
+
+/* Summary row */
+.summary-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem}
+.sm{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.85rem 1rem}
+.sm-val{font-family:var(--mono);font-size:1.3rem;font-weight:600}
+.sm-lbl{font-size:.68rem;color:var(--muted);margin-top:.2rem}
+
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">⬡ CI/CD Pipeline Visualizer</div>
+  <div class="hbadges">
+    <span class="hb gh">GitHub Actions</span>
+    <span class="hb az">Azure DevOps</span>
+    <span class="hb az">OpenShift Deploy</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Trigger bar -->
+  <div class="trigger-bar">
+    <div class="trigger-info">
+      <div>
+        <div style="font-size:.78rem;font-weight:600">push → main</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.15rem">feat: add Azure OpenAI audit integration</div>
+      </div>
+      <div class="commit-hash">3fa8c2e</div>
+      <div class="branch-badge">⎇ main</div>
+      <div style="font-family:var(--mono);font-size:.65rem;color:var(--muted)">fahim-a-efaji · just now</div>
+    </div>
+    <div class="trigger-btns">
+      <button class="tbtn primary" onclick="startPipeline()">▶ Run Pipeline</button>
+      <button class="tbtn danger" onclick="failPipeline()">✕ Simulate Failure</button>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-row">
+    <div class="sm"><div class="sm-val" style="color:var(--green)" id="sm-status">Ready</div><div class="sm-lbl">Pipeline Status</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--blue)" id="sm-dur">—</div><div class="sm-lbl">Total Duration</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--cyan)" id="sm-jobs">0/0</div><div class="sm-lbl">Jobs Complete</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--orange)" id="sm-tests">—</div><div class="sm-lbl">Tests Passed</div></div>
+    <div class="sm"><div class="sm-val" style="color:var(--purple)" id="sm-cov">—</div><div class="sm-lbl">Coverage</div></div>
+  </div>
+
+  <!-- Pipeline canvas -->
+  <div class="pipeline-canvas">
+    <div style="font-family:var(--mono);font-size:.65rem;color:var(--muted2);margin-bottom:1rem">// GitHub Actions workflow: etl-pipeline.yml → Azure OpenShift</div>
+    <div class="pipeline-track" id="pipeline-track"></div>
+  </div>
+
+  <!-- Jobs breakdown -->
+  <div class="jobs-panel">
+    <div class="jp-header">
+      <div class="jp-title">Job Runner Breakdown</div>
+      <div class="jp-meta" id="jp-meta">Waiting for run…</div>
+    </div>
+    <div id="jobs-list"></div>
+  </div>
+
+  <!-- Logs -->
+  <div class="logs-panel">
+    <div class="lp-header">
+      <div class="lp-title">Live Pipeline Logs</div>
+      <span style="font-family:var(--mono);font-size:.62rem;color:var(--green)">● streaming</span>
+    </div>
+    <div class="log-terminal" id="log-terminal"></div>
+  </div>
+
+</div>
+
+<script>
+const STAGES=[
+  {id:'checkout',   icon:'📥', name:'Checkout',    dur:'12s',  runner:'ubuntu-22.04'},
+  {id:'lint',       icon:'🔍', name:'Lint & Scan',  dur:'28s',  runner:'ubuntu-22.04'},
+  {id:'test',       icon:'🧪', name:'Test Suite',   dur:'1m 42s',runner:'ubuntu-22.04'},
+  {id:'build',      icon:'🔨', name:'Build Image',  dur:'2m 08s',runner:'ubuntu-22.04'},
+  {id:'push',       icon:'📦', name:'Push to ACR',  dur:'34s',  runner:'ubuntu-22.04'},
+  {id:'deploy-stg', icon:'🚀', name:'Deploy Staging',dur:'1m 12s',runner:'azure-runner'},
+  {id:'smoke',      icon:'💨', name:'Smoke Tests',  dur:'45s',  runner:'azure-runner'},
+  {id:'deploy-prd', icon:'✅', name:'Deploy PROD',  dur:'1m 28s',runner:'azure-runner'},
+];
+
+const JOBS=[
+  {name:'checkout-code',          stage:'Checkout',    runner:'ubuntu-22.04',    dur:'12s',  progress:100},
+  {name:'flake8-lint',            stage:'Lint',        runner:'ubuntu-22.04',    dur:'14s',  progress:100},
+  {name:'bandit-security-scan',   stage:'Lint',        runner:'ubuntu-22.04',    dur:'28s',  progress:100},
+  {name:'pytest-unit',            stage:'Test',        runner:'ubuntu-22.04',    dur:'54s',  progress:100},
+  {name:'pytest-integration',     stage:'Test',        runner:'ubuntu-22.04',    dur:'1m 42s',progress:100},
+  {name:'docker-build',           stage:'Build',       runner:'ubuntu-22.04',    dur:'2m 08s',progress:100},
+  {name:'acr-push',               stage:'Push',        runner:'ubuntu-22.04',    dur:'34s',  progress:100},
+  {name:'helm-upgrade-staging',   stage:'Staging',     runner:'azure-runner-01', dur:'1m 12s',progress:100},
+  {name:'smoke-test-staging',     stage:'Smoke',       runner:'azure-runner-01', dur:'45s',  progress:100},
+  {name:'helm-upgrade-prod',      stage:'PROD',        runner:'azure-runner-02', dur:'1m 28s',progress:100},
+];
+
+const LOG_LINES=[
+  {stage:'build',msg:'Setting up Python 3.11 environment'},
+  {stage:'build',msg:'Installing dependencies from requirements.txt (<hl>127 packages</hl>)'},
+  {stage:'scan', msg:'Running Bandit security scan…'},
+  {stage:'scan', msg:'<ok>No critical vulnerabilities found</ok>'},
+  {stage:'test', msg:'Collected <hl>284 pytest tests</hl> across 12 modules'},
+  {stage:'test', msg:'<ok>284/284 tests passed</ok> — duration: 54.2s'},
+  {stage:'test', msg:'Coverage report: <hl>87.4%</hl> (threshold: 80%)'},
+  {stage:'build',msg:'Building Docker image: etl-pipeline:3fa8c2e'},
+  {stage:'build',msg:'Layer cache hit: 8/12 layers — fast build'},
+  {stage:'build',msg:'<ok>Image built</ok> — size: 842MB (compressed: 312MB)'},
+  {stage:'build',msg:'Pushing to Azure Container Registry: prodacr.azurecr.io'},
+  {stage:'deploy',msg:'helm upgrade etl-pipeline ./charts/etl --namespace audit'},
+  {stage:'deploy',msg:'Waiting for rollout: deployment/etl-pipeline-api…'},
+  {stage:'deploy',msg:'<ok>Rollout complete</ok> — 3/3 pods running'},
+  {stage:'test', msg:'Running smoke tests against staging.exxon-audit.internal'},
+  {stage:'test', msg:'<ok>Smoke tests passed</ok> — API responding ✓'},
+  {stage:'deploy',msg:'Promoting to PROD: helm upgrade etl-pipeline --namespace prod'},
+  {stage:'deploy',msg:'<ok>PROD deployment complete</ok> — 5/5 pods healthy'},
+  {stage:'build',msg:'<ok>✓ Pipeline complete — total: 8m 29s</ok>'},
+];
+
+let running=false;
+let failMode=false;
+let stageIdx=0;
+let logIdx=0;
+let startTs=null;
+let timerInterval=null;
+let logInterval=null;
+
+function renderStages(states={}){
+  const track=document.getElementById('pipeline-track');
+  track.innerHTML='';
+  STAGES.forEach((s,i)=>{
+    const state=states[s.id]||'idle';
+    const dur=state==='success'?s.dur:'—';
+    const statusText={idle:'waiting',running:'running…',success:'✓ '+s.dur,failed:'✗ failed',skipped:'skipped'}[state];
+    const statusClass={idle:'idle',running:'run',success:'ok',failed:'fail',skipped:'idle'}[state];
+    const connClass={idle:'',running:'running',success:'active',failed:'failed'}[states[STAGES[i+1]?.id]||''||state]==='active'?'active':state==='success'?'active':state==='failed'?'failed':state==='running'?'running':'';
+
+    const el=document.createElement('div');
+    el.className='stage';
+    el.innerHTML=`
+      <div class="stage-box ${state}" onclick="showStageLog('${s.id}')">
+        <div class="stage-icon">${s.icon}</div>
+        <div class="stage-name">${s.name}</div>
+        <div class="stage-status ${statusClass}">${statusText}</div>
+      </div>
+      <div class="stage-dur">${state==='success'?s.dur:state==='running'?'…':''}</div>
+      <div class="stage-connector ${state==='success'?'active':state==='running'?'running':state==='failed'?'failed':''}"></div>
+    `;
+    track.appendChild(el);
+  });
+}
+
+function renderJobs(completedIdx=-1,failIdx=-1){
+  const list=document.getElementById('jobs-list');
+  list.innerHTML=JOBS.map((j,i)=>{
+    let status='idle';
+    if(i<=completedIdx&&i!==failIdx)status='ok';
+    else if(i===completedIdx+1)status='run';
+    else if(i===failIdx)status='fail';
+    const icons={ok:'✓',run:'⟳',fail:'✗',idle:'○'};
+    const prog=status==='ok'?j.progress:status==='run'?Math.floor(Math.random()*60+20):0;
+    return`<div class="job-item">
+      <div class="ji-icon ${status}">${icons[status]}</div>
+      <div class="ji-name">${j.name}</div>
+      <div class="ji-stage" style="font-size:.62rem;color:var(--muted)">${j.stage}</div>
+      <div class="ji-runner">${j.runner}</div>
+      <div class="progress-wrap"><div class="progress-fill" style="width:${prog}%;background:${status==='ok'?'var(--green)':status==='run'?'var(--blue)':status==='fail'?'var(--red)':'var(--muted2)'}"></div></div>
+      <div class="ji-dur">${status==='ok'?j.dur:status==='run'?'…':'—'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('jp-meta').textContent=`${Math.max(0,completedIdx+1)}/${JOBS.length} jobs · ${JOBS.slice(0,Math.max(0,completedIdx+1)).map(j=>j.runner).filter((v,i,a)=>a.indexOf(v)===i).join(', ')||'—'}`;
+}
+
+const terminal=document.getElementById('log-terminal');
+function addLog(entry){
+  const now=new Date().toLocaleTimeString('en-GB',{hour12:false});
+  const line=document.createElement('div');
+  line.className='ll';
+  const stageMap={build:'build',scan:'scan',test:'test',deploy:'deploy'};
+  const sc=stageMap[entry.stage]||'build';
+  line.innerHTML=`<span class="ll-ts">${now}</span><span class="ll-stage ${sc}">${entry.stage}</span><span class="ll-msg">${entry.msg.replace(/<hl>(.*?)<\/hl>/g,'<span class="hl">$1</span>').replace(/<ok>(.*?)<\/ok>/g,'<span class="ok">$1</span>').replace(/<warn>(.*?)<\/warn>/g,'<span class="warn">$1</span>')}</span>`;
+  terminal.appendChild(line);
+  terminal.scrollTop=terminal.scrollHeight;
+}
+
+function updateTimer(){
+  if(!startTs)return;
+  const elapsed=Math.floor((Date.now()-startTs)/1000);
+  const m=Math.floor(elapsed/60),s=elapsed%60;
+  document.getElementById('sm-dur').textContent=m>0?m+'m '+s+'s':s+'s';
+}
+
+function startPipeline(fail=false){
+  if(running)return;
+  running=true;
+  failMode=fail;
+  stageIdx=0;
+  logIdx=0;
+  startTs=Date.now();
+  terminal.innerHTML='';
+  renderStages({});
+  renderJobs(-1);
+  document.getElementById('sm-status').textContent='Running';
+  document.getElementById('sm-status').style.color='var(--blue)';
+  document.getElementById('sm-jobs').textContent='0/'+STAGES.length;
+  document.getElementById('sm-tests').textContent='—';
+  document.getElementById('sm-cov').textContent='—';
+  if(timerInterval)clearInterval(timerInterval);
+  timerInterval=setInterval(updateTimer,1000);
+  runStage();
+  logInterval=setInterval(()=>{
+    if(logIdx<LOG_LINES.length){addLog(LOG_LINES[logIdx++]);}
+  },900);
+}
+
+function failPipeline(){startPipeline(true);}
+
+function runStage(){
+  if(stageIdx>=STAGES.length){
+    finishPipeline();return;
+  }
+  const FAIL_AT=3;
+  if(failMode&&stageIdx===FAIL_AT){
+    const states={};
+    STAGES.slice(0,FAIL_AT).forEach(s=>states[s.id]='success');
+    states[STAGES[FAIL_AT].id]='failed';
+    renderStages(states);
+    renderJobs(FAIL_AT-1);
+    document.getElementById('sm-status').textContent='Failed';
+    document.getElementById('sm-status').style.color='var(--red)';
+    document.getElementById('sm-jobs').textContent=FAIL_AT+'/'+STAGES.length;
+    clearInterval(timerInterval);
+    clearInterval(logInterval);
+    addLog({stage:'test',msg:'<span class="err">✗ 3 tests failed — pytest-integration::test_snowflake_connection</span>'});
+    addLog({stage:'test',msg:'<span class="err">Pipeline aborted at Test stage</span>'});
+    running=false;return;
+  }
+  const states={};
+  STAGES.slice(0,stageIdx).forEach(s=>states[s.id]='success');
+  states[STAGES[stageIdx].id]='running';
+  renderStages(states);
+  renderJobs(stageIdx-1);
+  document.getElementById('sm-jobs').textContent=stageIdx+'/'+STAGES.length;
+  const dur=[1200,1800,2500,2200,1400,1800,1600,2100][stageIdx]||1500;
+  setTimeout(()=>{
+    stageIdx++;
+    runStage();
+  },dur);
+}
+
+function finishPipeline(){
+  const states={};
+  STAGES.forEach(s=>states[s.id]='success');
+  renderStages(states);
+  renderJobs(JOBS.length-1);
+  document.getElementById('sm-status').textContent='Passed ✓';
+  document.getElementById('sm-status').style.color='var(--green)';
+  document.getElementById('sm-jobs').textContent=STAGES.length+'/'+STAGES.length;
+  document.getElementById('sm-tests').textContent='284/284';
+  document.getElementById('sm-cov').textContent='87.4%';
+  clearInterval(timerInterval);
+  clearInterval(logInterval);
+  running=false;
+}
+
+function showStageLog(id){
+  addLog({stage:'build',msg:`Showing logs for stage: <span class="hl">${id}</span>`});
+}
+
+// Init
+renderStages({});
+renderJobs(-1);
+</script>
+</body>
+</html>

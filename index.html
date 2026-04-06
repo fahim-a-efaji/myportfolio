@@ -184,106 +184,126 @@
     <div class="section-header fade-up">
       <p class="section-tag">// portfolio</p>
       <h2>Featured Projects</h2>
-      <p>Five fully working projects built from scratch — click Live Demo to open any project inline.</p>
+      <p>Six fully working projects — each one maps directly to real work done at ExxonMobil. Click Live Demo to open any project.</p>
     </div>
     <div class="projects-grid">
 
-      <!-- Project 1: AI Data Chat -->
+      <!-- Project 1: ETL Pipeline Monitor -->
+      <div class="project-card fade-up">
+        <div class="project-header">
+          <span class="project-icon">⚙️</span>
+          <div class="project-links">
+            <button class="project-link primary" onclick="openDemo('projects/project1-etl-pipeline.html', 'ETL Pipeline Monitor')">▶ Live Demo</button>
+            <a class="project-link" href="projects/project1-etl-pipeline.html" target="_blank">↗</a>
+          </div>
+        </div>
+        <div class="project-body">
+          <h3>ETL Pipeline Monitor</h3>
+          <div class="project-metric">📈 Live pipeline stages · Run log · 24h row charts · Terminal output</div>
+          <p>A real-time ETL monitoring dashboard showing pipeline stages, row counts, run history, error tracking, and live log output — mirrors the Python+SQL+Snowflake pipelines built at ExxonMobil.</p>
+          <div class="project-tags">
+            <span class="tag">Python</span><span class="tag">SQL Server</span>
+            <span class="tag">Snowflake</span><span class="tag">Azure</span><span class="tag">ETL/ELT</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 2: Financial Anomaly Detection -->
+      <div class="project-card fade-up">
+        <div class="project-header">
+          <span class="project-icon">🔍</span>
+          <div class="project-links">
+            <button class="project-link primary" onclick="openDemo('projects/project2-anomaly-dashboard.html', 'Financial Anomaly Detection Dashboard')">▶ Live Demo</button>
+            <a class="project-link" href="projects/project2-anomaly-dashboard.html" target="_blank">↗</a>
+          </div>
+        </div>
+        <div class="project-body">
+          <h3>Financial Anomaly Detection Dashboard</h3>
+          <div class="project-metric">📈 Z-score detection · DAX measures · Power BI-style KPIs · 23 anomalies flagged</div>
+          <p>Power BI-style dashboard with Z-score anomaly detection, flagged transaction table, DAX measure code, and Python detection logic — direct replica of ExxonMobil Global Audit work.</p>
+          <div class="project-tags">
+            <span class="tag warn">Power BI</span><span class="tag warn">DAX</span>
+            <span class="tag warn">Python</span><span class="tag warn">Z-Score</span><span class="tag warn">Audit Analytics</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 3: SQL Data Modeling -->
+      <div class="project-card fade-up">
+        <div class="project-header">
+          <span class="project-icon">🗃️</span>
+          <div class="project-links">
+            <button class="project-link primary" onclick="openDemo('projects/project3-sql-modeling.html', 'SQL Data Modeling Showcase')">▶ Live Demo</button>
+            <a class="project-link" href="projects/project3-sql-modeling.html" target="_blank">↗</a>
+          </div>
+        </div>
+        <div class="project-body">
+          <h3>SQL Data Modeling Showcase</h3>
+          <div class="project-metric">📈 Star schema · Window functions · Recursive CTEs · Index strategy · Query performance</div>
+          <p>Interactive SQL showcase with a full Snowflake star schema, 5 advanced query patterns (window functions, CTEs, dynamic PIVOT, anomaly detection in SQL), and index performance comparison.</p>
+          <div class="project-tags">
+            <span class="tag">SQL Server</span><span class="tag">Snowflake</span>
+            <span class="tag">Star Schema</span><span class="tag">CTEs</span><span class="tag">Data Modeling</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 4: Python Data Pipeline -->
+      <div class="project-card fade-up">
+        <div class="project-header">
+          <span class="project-icon">🐍</span>
+          <div class="project-links">
+            <button class="project-link primary" onclick="openDemo('projects/project4-python-pipeline.html', 'Python Data Pipeline — Live Output')">▶ Live Demo</button>
+            <a class="project-link" href="projects/project4-python-pipeline.html" target="_blank">↗</a>
+          </div>
+        </div>
+        <div class="project-body">
+          <h3>Python Data Pipeline — Live Output</h3>
+          <div class="project-metric">📈 Step-by-step execution · df.info() · df.head() · Live charts · Real Python code</div>
+          <p>Full Python ETL pipeline with actual pandas/scipy code, step-by-step execution animation, live terminal output, DataFrame inspection, and automatic chart generation from transformed data.</p>
+          <div class="project-tags">
+            <span class="tag">Python</span><span class="tag">pandas</span>
+            <span class="tag">scipy</span><span class="tag">ETL</span><span class="tag">Data Cleaning</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 5: CI/CD Pipeline Visualizer -->
+      <div class="project-card fade-up">
+        <div class="project-header">
+          <span class="project-icon">🚀</span>
+          <div class="project-links">
+            <button class="project-link primary" onclick="openDemo('projects/project5-cicd-pipeline.html', 'CI/CD Pipeline Visualizer')">▶ Live Demo</button>
+            <a class="project-link" href="projects/project5-cicd-pipeline.html" target="_blank">↗</a>
+          </div>
+        </div>
+        <div class="project-body">
+          <h3>CI/CD Pipeline Visualizer</h3>
+          <div class="project-metric">📈 Animated GitHub Actions · Stage-by-stage execution · Simulate success & failure</div>
+          <p>Interactive animated CI/CD pipeline showing GitHub Actions stages from checkout → lint → test → build → push → deploy. Simulate success or failure with live log streaming and job runner breakdown.</p>
+          <div class="project-tags">
+            <span class="tag purple">GitHub Actions</span><span class="tag purple">Azure DevOps</span>
+            <span class="tag purple">OpenShift</span><span class="tag purple">CI/CD</span><span class="tag purple">DevOps</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project 6: AI Chat with Data -->
       <div class="project-card fade-up">
         <div class="project-header">
           <span class="project-icon">🤖</span>
           <div class="project-links">
-            <button class="project-link primary" onclick="openDemo('projects/ai-assistant.html', 'AI Data Chat Assistant')">▶ Live Demo</button>
-            <a class="project-link" href="projects/ai-assistant.html" target="_blank">↗</a>
+            <button class="project-link primary" onclick="openDemo('projects/project6-ai-chat.html', 'Chat with Your Data — AI Assistant')">▶ Live Demo</button>
+            <a class="project-link" href="projects/project6-ai-chat.html" target="_blank">↗</a>
           </div>
         </div>
         <div class="project-body">
-          <h3>AI Data Chat Assistant</h3>
-          <div class="project-metric">📈 Mirrors the Azure OpenAI solution built at ExxonMobil · 30% analysis time reduction</div>
-          <p>A working "Chat with Your Data" app powered by Claude AI. Loaded with a real sales dataset; ask anything in natural language and get data-backed insights instantly.</p>
+          <h3>Chat with Your Data — AI Assistant</h3>
+          <div class="project-metric">📈 Exact ExxonMobil Azure OpenAI implementation · NL → SQL → Chart · 30% faster analysis</div>
+          <p>Natural language to SQL to chart pipeline powered by Claude AI — the exact system built at ExxonMobil for Global Audit using Azure OpenAI, reducing analysis time by 30% and improving audit coverage to 94.7%.</p>
           <div class="project-tags">
-            <span class="tag">Claude API</span><span class="tag">JavaScript</span>
-            <span class="tag">RAG Concept</span><span class="tag">NLP</span><span class="tag">Data Context</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Project 2: SQL Playground -->
-      <div class="project-card fade-up">
-        <div class="project-header">
-          <span class="project-icon">🛢️</span>
-          <div class="project-links">
-            <button class="project-link primary" onclick="openDemo('projects/sql-playground.html', 'SQL Query Playground')">▶ Live Demo</button>
-            <a class="project-link" href="projects/sql-playground.html" target="_blank">↗</a>
-          </div>
-        </div>
-        <div class="project-body">
-          <h3>SQL Query Playground</h3>
-          <div class="project-metric">📈 Full SQL engine · Auto data visualization · Schema explorer</div>
-          <p>A fully functional in-browser SQL engine with real schema (orders + customers tables). Write queries or use templates — SELECT, WHERE, GROUP BY, aggregations all work. Results auto-generate charts.</p>
-          <div class="project-tags">
-            <span class="tag">SQL</span><span class="tag">JavaScript</span>
-            <span class="tag">Chart.js</span><span class="tag">Data Modeling</span><span class="tag">ETL Logic</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Project 3: KPI Dashboard -->
-      <div class="project-card fade-up">
-        <div class="project-header">
-          <span class="project-icon">⚡</span>
-          <div class="project-links">
-            <button class="project-link primary" onclick="openDemo('projects/kpi-dashboard.html', 'Operations KPI Dashboard')">▶ Live Demo</button>
-            <a class="project-link" href="projects/kpi-dashboard.html" target="_blank">↗</a>
-          </div>
-        </div>
-        <div class="project-body">
-          <h3>Operations KPI Dashboard</h3>
-          <div class="project-metric">📈 Real-time KPI monitoring · Anomaly detection · Multi-period filtering</div>
-          <p>A Power BI-style live dashboard with 5 KPI cards, revenue vs cost trends, regional breakdowns, product rankings, and anomaly alert panel. Filter by 1M, 3M, 6M, YTD.</p>
-          <div class="project-tags">
-            <span class="tag warn">Power BI Concepts</span><span class="tag warn">Chart.js</span>
-            <span class="tag warn">KPI Design</span><span class="tag warn">DAX Logic</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Project 4: CSV Analyzer -->
-      <div class="project-card fade-up">
-        <div class="project-header">
-          <span class="project-icon">📂</span>
-          <div class="project-links">
-            <button class="project-link primary" onclick="openDemo('projects/csv-analyzer.html', 'CSV Data Analyzer')">▶ Live Demo</button>
-            <a class="project-link" href="projects/csv-analyzer.html" target="_blank">↗</a>
-          </div>
-        </div>
-        <div class="project-body">
-          <h3>CSV Data Analyzer</h3>
-          <div class="project-metric">📈 Auto column type detection · Full EDA in seconds · Drag-and-drop upload</div>
-          <p>Drop any CSV and instantly get auto column detection, descriptive statistics (min, max, mean, unique count), histogram distributions, top-category charts, and a data preview table.</p>
-          <div class="project-tags">
-            <span class="tag">EDA</span><span class="tag">Data Cleaning</span>
-            <span class="tag">Statistics</span><span class="tag">Chart.js</span><span class="tag">JavaScript</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Project 5: Finance Tracker -->
-      <div class="project-card fade-up">
-        <div class="project-header">
-          <span class="project-icon">💰</span>
-          <div class="project-links">
-            <button class="project-link primary" onclick="openDemo('projects/finance-tracker.html', 'Personal Finance Tracker')">▶ Live Demo</button>
-            <a class="project-link" href="projects/finance-tracker.html" target="_blank">↗</a>
-          </div>
-        </div>
-        <div class="project-body">
-          <h3>Personal Finance Tracker</h3>
-          <div class="project-metric">📈 Real-time balance tracking · Category analytics · Pre-seeded with sample data</div>
-          <p>A full budgeting app with income/expense tracking, category breakdowns, monthly bar charts, donut charts, savings rate KPI, and data persistence via IndexedDB.</p>
-          <div class="project-tags">
-            <span class="tag purple">Financial Modeling</span><span class="tag purple">Chart.js</span>
-            <span class="tag purple">IndexedDB</span><span class="tag purple">KPI Tracking</span>
+            <span class="tag">Claude API</span><span class="tag">Azure OpenAI</span>
+            <span class="tag">RAG</span><span class="tag">NLP</span><span class="tag">Financial Audit</span>
           </div>
         </div>
       </div>
@@ -303,11 +323,11 @@
         <h2>Get In Touch</h2>
         <p>Open to new opportunities in data engineering, analytics, and AI-powered solutions. Based in Budapest, Hungary. Open to roles worldwide and willing to relocate.</p>
         <div class="contact-links">
-          <a class="contact-link" href="mailto:fahim007alefaji@gmail.com">
+          <a class="contact-link" href="/cdn-cgi/l/email-protection#1b7d7a7372762b2b2c7a777e7d7a71725b7c767a727735787476">
             <span class="contact-link-icon">✉️</span>
             <div class="contact-link-body">
               <div class="contact-link-label">Email</div>
-              <div class="contact-link-value">fahim007alefaji@gmail.com</div>
+              <div class="contact-link-value"><span class="__cf_email__" data-cfemail="bcdaddd4d5d18c8c8bddd0d9daddd6d5fcdbd1ddd5d092dfd3d1">[email&#160;protected]</span></div>
             </div>
           </a>
           <a class="contact-link" href="tel:+36704077007">
@@ -381,10 +401,3 @@
         <button class="modal-close" id="modal-close">✕ Close</button>
       </div>
     </div>
-    <iframe id="demo-frame" title="Project Demo" allowfullscreen></iframe>
-  </div>
-</div>
-
-<script src="js/main.js"></script>
-</body>
-</html>

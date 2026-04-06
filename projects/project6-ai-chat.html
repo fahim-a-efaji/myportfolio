@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Chat with Your Data — AI Assistant — Fahim Al Efaji</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#09090b;--s1:#111113;--s2:#18181b;--s3:#27272a;
+  --border:#3f3f46;--border2:#52525b;
+  --text:#fafafa;--muted:#a1a1aa;--muted2:#52525b;
+  --accent:#22d3ee;--accent2:#0e7490;--accent3:#083344;
+  --green:#4ade80;--red:#f87171;--orange:#fb923c;--purple:#c084fc;
+  --mono:'Geist Mono',monospace;--sans:'Geist',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* Header */
+.header{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  padding:.7rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.logo{display:flex;align-items:center;gap:.75rem}
+.logo-icon{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:.85rem}
+.logo-text{font-size:.9rem;font-weight:600}
+.logo-sub{font-size:.68rem;color:var(--muted);font-family:var(--mono)}
+.hbadges{display:flex;gap:.4rem}
+.hb{font-family:var(--mono);font-size:.62rem;padding:.15rem .5rem;border-radius:4px;border:1px solid}
+.hb.ai{background:rgba(34,211,238,.07);border-color:rgba(34,211,238,.25);color:var(--accent)}
+.hb.exxon{background:rgba(251,146,60,.07);border-color:rgba(251,146,60,.2);color:var(--orange)}
+
+/* Layout */
+.workspace{display:grid;grid-template-columns:260px 1fr 300px;flex:1;overflow:hidden}
+
+/* Left: data context */
+.context-panel{
+  background:var(--s1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.cp-head{padding:.85rem 1rem;border-bottom:1px solid var(--border)}
+.cp-head-title{font-family:var(--mono);font-size:.7rem;color:var(--accent);margin-bottom:.5rem}
+.dataset-card{
+  background:var(--s2);border:1px solid var(--border);border-radius:6px;
+  padding:.6rem .75rem;margin-bottom:.35rem;cursor:pointer;transition:all .15s;
+}
+.dataset-card:hover{border-color:var(--accent2)}
+.dataset-card.active{border-color:var(--accent);background:rgba(34,211,238,.04)}
+.dc-name{font-family:var(--mono);font-size:.72rem;font-weight:500}
+.dc-meta{font-size:.65rem;color:var(--muted);margin-top:.15rem}
+.cp-schema{padding:.85rem 1rem;flex:1;overflow-y:auto}
+.schema-title{font-family:var(--mono);font-size:.65rem;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem}
+.schema-col{display:flex;align-items:center;gap:.5rem;padding:.25rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.schema-col:last-child{border-bottom:none}
+.col-name{font-family:var(--mono);font-size:.7rem;color:var(--text);flex:1}
+.col-type{font-family:var(--mono);font-size:.6rem;color:var(--muted2)}
+.col-sample{font-family:var(--mono);font-size:.62rem;color:var(--accent);background:rgba(34,211,238,.06);border-radius:3px;padding:.05rem .3rem;white-space:nowrap}
+
+/* Center: Chat */
+.chat-panel{display:flex;flex-direction:column;overflow:hidden}
+.messages{flex:1;overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:1rem}
+
+.msg-wrap{display:flex;flex-direction:column;gap:.3rem}
+.msg-wrap.user{align-items:flex-end}
+.msg-wrap.ai{align-items:flex-start}
+.msg-label{font-family:var(--mono);font-size:.62rem;color:var(--muted2);padding:0 .1rem}
+
+.msg{
+  max-width:75%;padding:.85rem 1rem;border-radius:12px;
+  line-height:1.65;font-size:.88rem;
+}
+.msg.user{
+  background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);
+  color:var(--text);border-radius:12px 12px 2px 12px;
+}
+.msg.ai{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:2px 12px 12px 12px;
+}
+.msg-chart{
+  background:var(--s3);border-radius:8px;padding:.85rem;
+  margin-top:.75rem;
+}
+.msg-table{width:100%;border-collapse:collapse;margin-top:.75rem;font-size:.78rem}
+.msg-table th{background:var(--s3);padding:.35rem .65rem;text-align:left;font-family:var(--mono);font-size:.65rem;color:var(--muted);border-bottom:1px solid var(--border)}
+.msg-table td{padding:.32rem .65rem;border-bottom:1px solid rgba(255,255,255,.04);font-family:var(--mono);font-size:.7rem}
+.msg-sql{
+  background:#020617;border:1px solid var(--border);border-radius:6px;
+  padding:.6rem .85rem;margin-top:.6rem;font-family:var(--mono);font-size:.72rem;
+  line-height:1.7;overflow-x:auto;
+}
+.sql-kw{color:#7dd3fc}.sql-fn{color:#fcd34d}.sql-tbl{color:var(--accent)}
+
+.thinking{display:flex;gap:.3rem;padding:.5rem 0;align-items:center}
+.thinking span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:think .9s infinite}
+.thinking span:nth-child(2){animation-delay:.15s}.thinking span:nth-child(3){animation-delay:.3s}
+@keyframes think{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.thinking-text{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+
+/* Input */
+.input-area{
+  padding:.85rem 1.25rem;border-top:1px solid var(--border);
+  background:var(--s1);flex-shrink:0;
+}
+.input-wrap{display:flex;gap:.6rem;align-items:flex-end}
+#user-input{
+  flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  padding:.7rem .9rem;color:var(--text);font-family:var(--sans);font-size:.88rem;
+  outline:none;resize:none;transition:border-color .2s;min-height:44px;max-height:120px;
+}
+#user-input:focus{border-color:var(--accent)}
+.send-btn{
+  background:var(--accent);color:#000;border:none;border-radius:9px;
+  width:38px;height:38px;cursor:pointer;font-size:1rem;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.send-btn:hover{background:#67e8f9}.send-btn:disabled{opacity:.4;cursor:default}
+.suggestions{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.65rem}
+.sug{
+  font-size:.72rem;padding:.3rem .7rem;border-radius:6px;cursor:pointer;
+  background:var(--s2);border:1px solid var(--border);color:var(--muted);
+  transition:all .15s;white-space:nowrap;
+}
+.sug:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Right: Insight panel */
+.insights-panel{background:var(--s1);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.ip-head{padding:.85rem 1rem;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:.7rem;color:var(--accent)}
+.ip-body{padding:.85rem 1rem;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:.85rem}
+.insight-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:.85rem}
+.ic-title{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-bottom:.5rem}
+.ic-val{font-family:var(--mono);font-size:1.4rem;font-weight:500;line-height:1}
+.ic-sub{font-size:.68rem;color:var(--muted);margin-top:.25rem}
+.exxon-note{background:rgba(251,146,60,.05);border:1px solid rgba(251,146,60,.15);border-radius:8px;padding:.75rem}
+.en-title{font-family:var(--mono);font-size:.68rem;color:var(--orange);margin-bottom:.35rem}
+.en-body{font-size:.75rem;color:var(--muted);line-height:1.5}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">🤖</div>
+    <div>
+      <div class="logo-text">Chat with Your Data</div>
+      <div class="logo-sub">Azure OpenAI concept · Claude API · RAG</div>
+    </div>
+  </div>
+  <div class="hbadges">
+    <span class="hb ai">Claude API</span>
+    <span class="hb ai">NL → SQL → Chart</span>
+    <span class="hb exxon">⚡ ExxonMobil Audit Implementation</span>
+  </div>
+</div>
+
+<div class="workspace">
+
+  <!-- Left: Context panel -->
+  <div class="context-panel">
+    <div class="cp-head">
+      <div class="cp-head-title">📊 Loaded Datasets</div>
+      <div class="dataset-card active">
+        <div class="dc-name">financial_transactions</div>
+        <div class="dc-meta">52,444 rows · 11 columns</div>
+      </div>
+      <div class="dataset-card">
+        <div class="dc-name">vendor_master</div>
+        <div class="dc-meta">1,284 vendors · 8 columns</div>
+      </div>
+      <div class="dataset-card">
+        <div class="dc-name">cost_centers</div>
+        <div class="dc-meta">42 cost centers · 5 columns</div>
+      </div>
+    </div>
+    <div class="cp-schema">
+      <div class="schema-title">financial_transactions schema</div>
+      <div class="schema-col"><span class="col-name">transaction_id</span><span class="col-type">VARCHAR</span><span class="col-sample">TXN-84921</span></div>
+      <div class="schema-col"><span class="col-name">amount</span><span class="col-type">DECIMAL</span><span class="col-sample">$284,500</span></div>
+      <div class="schema-col"><span class="col-name">category</span><span class="col-type">VARCHAR</span><span class="col-sample">Vendor Pay</span></div>
+      <div class="schema-col"><span class="col-name">vendor_id</span><span class="col-type">VARCHAR</span><span class="col-sample">V-00291</span></div>
+      <div class="schema-col"><span class="col-name">transaction_date</span><span class="col-type">DATE</span><span class="col-sample">2024-03-15</span></div>
+      <div class="schema-col"><span class="col-name">cost_center</span><span class="col-type">VARCHAR</span><span class="col-sample">CC001</span></div>
+      <div class="schema-col"><span class="col-name">z_score</span><span class="col-type">FLOAT</span><span class="col-sample">4.231</span></div>
+      <div class="schema-col"><span class="col-name">is_anomaly</span><span class="col-type">BOOL</span><span class="col-sample">true</span></div>
+      <div class="schema-col"><span class="col-name">fiscal_quarter</span><span class="col-type">VARCHAR</span><span class="col-sample">Q1-2024</span></div>
+      <div class="schema-col"><span class="col-name">currency</span><span class="col-type">VARCHAR</span><span class="col-sample">USD</span></div>
+      <div class="schema-col"><span class="col-name">approver_id</span><span class="col-type">VARCHAR</span><span class="col-sample">EMP-1241</span></div>
+    </div>
+  </div>
+
+  <!-- Center: Chat -->
+  <div class="chat-panel">
+    <div class="messages" id="messages">
+
+      <div class="msg-wrap ai">
+        <div class="msg-label">AI Assistant</div>
+        <div class="msg ai">
+          <div style="margin-bottom:.5rem">Hello! I'm your <strong>AI data analyst</strong> — the same concept Fahim built at ExxonMobil for Global Audit using Azure OpenAI.</div>
+          <div style="margin-bottom:.5rem">I have access to <code style="background:var(--s3);padding:.1rem .35rem;border-radius:3px;font-size:.8em">financial_transactions</code> (52,444 rows), <code style="background:var(--s3);padding:.1rem .35rem;border-radius:3px;font-size:.8em">vendor_master</code>, and <code style="background:var(--s3);padding:.1rem .35rem;border-radius:3px;font-size:.8em">cost_centers</code>.</div>
+          <div>Ask anything in plain English and I'll translate to SQL, run the analysis, and show you charts instantly.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="input-area">
+      <div class="suggestions">
+        <div class="sug" onclick="ask(this)">Show top vendors by spend this year</div>
+        <div class="sug" onclick="ask(this)">Which anomalies are highest risk?</div>
+        <div class="sug" onclick="ask(this)">Revenue breakdown by quarter</div>
+        <div class="sug" onclick="ask(this)">Compare Q1 vs Q2 expenditure</div>
+        <div class="sug" onclick="ask(this)">Which cost center is over budget?</div>
+      </div>
+      <div class="input-wrap">
+        <textarea id="user-input" rows="1" placeholder="Ask anything about your financial data…" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Insights -->
+  <div class="insights-panel">
+    <div class="ip-head">📈 Live Insights</div>
+    <div class="ip-body">
+      <div class="insight-card">
+        <div class="ic-title">Total Spend (YTD)</div>
+        <div class="ic-val" style="color:var(--accent)">$84.2M</div>
+        <div class="ic-sub">↑ 3.1% vs prior year</div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">Anomalies Detected</div>
+        <div class="ic-val" style="color:var(--red)">23</div>
+        <div class="ic-sub">Require immediate review</div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">Audit Coverage</div>
+        <div class="ic-val" style="color:var(--green)">94.7%</div>
+        <div class="ic-sub">↑ 30% vs manual process</div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">AI Analysis Time</div>
+        <div class="ic-val" style="color:var(--purple)">1.4 hrs</div>
+        <div class="ic-sub">↓ 30% (was 2 hrs manual)</div>
+      </div>
+      <div class="exxon-note">
+        <div class="en-title">⚡ Real Implementation</div>
+        <div class="en-body">This exact system was built at ExxonMobil using Azure OpenAI GPT-4o, reducing Global Audit analysis time by 30% and improving anomaly detection coverage from 64% to 94.7%.</div>
+      </div>
+      <div class="insight-card">
+        <div class="ic-title">Questions Answered</div>
+        <div class="ic-val" style="color:var(--orange)" id="qa-count">0</div>
+        <div class="ic-sub">This session</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Simulated financial dataset context ──
+const DATA_CONTEXT=`
+FINANCIAL TRANSACTIONS DATASET (52,444 rows, 2024):
+
+SUMMARY:
+- Total spend: $84.2M across 8 categories
+- Anomalies: 23 transactions flagged (|z-score| > 2.5σ)
+- Date range: 2024-01-01 to 2024-12-31
+- Vendors: 1,284 unique vendors
+
+SPEND BY CATEGORY:
+Vendor Payments: $28.4M (33.7%) — 12,840 transactions
+IT Procurement:  $18.2M (21.6%) — 3,920 transactions
+Contractor Fees: $14.1M (16.7%) — 8,100 transactions
+Travel & Expenses: $8.2M (9.7%) — 18,940 transactions
+Facilities:      $6.8M (8.1%)  — 4,280 transactions
+Legal:           $4.1M (4.9%)  — 1,840 transactions
+Marketing:       $2.9M (3.4%)  — 1,620 transactions
+R&D:             $1.5M (1.8%)  — 904 transactions
+
+TOP 5 VENDORS BY SPEND:
+1. Accenture Ltd:      $8.4M (Q1: $4.3M, Q2: $4.1M)
+2. Deloitte Consulting: $6.1M
+3. IBM Services:       $5.8M
+4. Microsoft Azure:    $4.2M
+5. SAP SE:             $3.9M
+
+QUARTERLY:
+Q1-2024: $19.8M | Q2-2024: $21.4M | Q3-2024: $22.1M | Q4-2024: $20.9M
+
+TOP ANOMALIES:
+TXN-84921: Vendor Payments $284,500 (z=4.23) — HIGH
+TXN-71034: Contractor Fees $198,000 (z=3.82) — HIGH
+TXN-92811: Travel $45,200 (z=3.11) — HIGH
+TXN-60023: IT Procurement $312,000 (z=2.91) — MEDIUM
+
+COST CENTER BUDGET UTILIZATION:
+CC001 (Operations): 91.2% of $42M budget
+CC002 (Finance):    86.1% of $28M budget  
+CC003 (IT):         97.8% of $18M budget ← OVER 95% ALERT
+`;
+
+let qaCount=0;
+const chatHistory=[];
+
+async function sendMessage(text){
+  const input=document.getElementById('user-input');
+  const btn=document.getElementById('send-btn');
+  const q=text||input.value.trim();
+  if(!q)return;
+  input.value='';
+  autoResize(input);
+
+  appendMsg(q,'user');
+  chatHistory.push({role:'user',content:q});
+  btn.disabled=true;
+  showThinking();
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1500,
+        system:`You are an expert AI data analyst assistant embedded in a financial audit dashboard at ExxonMobil. You have access to the following financial dataset context:
+
+${DATA_CONTEXT}
+
+CRITICAL INSTRUCTIONS:
+1. Always answer based on the data context above — use exact numbers.
+2. When relevant, show the SQL query you would run (formatted with SQL syntax) inside a code block prefixed with "SQL:".
+3. When showing tabular data, format it as a markdown table with | separators.
+4. When a chart would help, describe it starting with "CHART:" followed by a JSON object like: {"type":"bar","labels":["Q1","Q2"],"data":[19.8,21.4],"label":"Spend ($M)","color":"cyan"}
+5. Keep responses concise and data-driven. Use $ amounts and % where relevant.
+6. Relate insights to audit relevance when possible.`,
+        messages:chatHistory
+      })
+    });
+    const data=await res.json();
+    const reply=data.content?.map(c=>c.text||'').join('')||'No response.';
+    chatHistory.push({role:'assistant',content:reply});
+    removeThinking();
+    renderAIMessage(reply);
+    qaCount++;
+    document.getElementById('qa-count').textContent=qaCount;
+  }catch(e){
+    removeThinking();
+    appendMsg('Error contacting AI API: '+e.message,'ai');
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+function appendMsg(text,role){
+  const wrap=document.createElement('div');
+  wrap.className=`msg-wrap ${role}`;
+  const label=document.createElement('div');
+  label.className='msg-label';
+  label.textContent=role==='user'?'You':'AI Assistant';
+  const msg=document.createElement('div');
+  msg.className=`msg ${role}`;
+  msg.textContent=text;
+  wrap.appendChild(label);
+  wrap.appendChild(msg);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+}
+
+function renderAIMessage(text){
+  const wrap=document.createElement('div');
+  wrap.className='msg-wrap ai';
+  const label=document.createElement('div');
+  label.className='msg-label';
+  label.textContent='AI Assistant';
+  wrap.appendChild(label);
+
+  const msg=document.createElement('div');
+  msg.className='msg ai';
+
+  // Extract SQL
+  const sqlMatch=text.match(/SQL:\s*```[\s\S]*?```/i)||text.match(/```sql([\s\S]*?)```/i);
+  // Extract CHART
+  const chartMatch=text.match(/CHART:\s*(\{[\s\S]*?\})/);
+  // Extract table
+  const tableMatch=text.match(/\|.*\|[\s\S]*?\|.*\|/);
+
+  let cleanText=text
+    .replace(/SQL:\s*```[\s\S]*?```/gi,'')
+    .replace(/```sql[\s\S]*?```/gi,'')
+    .replace(/CHART:\s*\{[\s\S]*?\}/g,'')
+    .replace(/\|.*\|[\s\S]*?\|.*\|/g,'')
+    .trim();
+
+  // Text content
+  if(cleanText){
+    const p=document.createElement('div');
+    p.style.lineHeight='1.65';
+    p.textContent=cleanText;
+    msg.appendChild(p);
+  }
+
+  // SQL block
+  if(sqlMatch){
+    const sqlCode=sqlMatch[0].replace(/SQL:\s*```sql?/i,'').replace(/```/g,'').trim();
+    const sqlDiv=document.createElement('div');
+    sqlDiv.className='msg-sql';
+    sqlDiv.innerHTML='<span style="color:var(--muted2);font-size:.62rem;display:block;margin-bottom:.4rem">// Generated SQL</span>'+
+      sqlCode.replace(/\b(SELECT|FROM|WHERE|GROUP BY|ORDER BY|JOIN|LEFT JOIN|INNER JOIN|ON|AS|AND|OR|HAVING|LIMIT|WITH|UNION|COUNT|SUM|AVG|MAX|MIN|ROUND|DESC|ASC|TOP|CASE|WHEN|THEN|ELSE|END|BY|IN|NOT|IS|NULL|DISTINCT|OVER|PARTITION)\b/g,'<span class="sql-kw">$1</span>').replace(/\b(financial_transactions|vendor_master|cost_centers|FACT_FINANCIAL)\b/g,'<span class="sql-tbl">$1</span>');
+    msg.appendChild(sqlDiv);
+  }
+
+  // Table
+  if(tableMatch){
+    const lines=tableMatch[0].split('\n').filter(l=>l.trim()&&!l.match(/^\|[-:| ]+\|$/));
+    if(lines.length>1){
+      const tbl=document.createElement('table');
+      tbl.className='msg-table';
+      lines.forEach((line,i)=>{
+        const cells=line.split('|').filter(c=>c.trim());
+        const row=document.createElement('tr');
+        cells.forEach(cell=>{
+          const el=document.createElement(i===0?'th':'td');
+          el.textContent=cell.trim();
+          row.appendChild(el);
+        });
+        tbl.appendChild(row);
+      });
+      msg.appendChild(tbl);
+    }
+  }
+
+  // Chart
+  if(chartMatch){
+    try{
+      const cfg=JSON.parse(chartMatch[1]);
+      const chartDiv=document.createElement('div');
+      chartDiv.className='msg-chart';
+      const canvas=document.createElement('canvas');
+      canvas.height=160;
+      chartDiv.appendChild(canvas);
+      msg.appendChild(chartDiv);
+      const colorMap={cyan:'rgba(34,211,238,',green:'rgba(74,222,128,',red:'rgba(248,113,113,',orange:'rgba(251,146,60,',purple:'rgba(192,132,252,'};
+      const c=colorMap[cfg.color]||colorMap.cyan;
+      setTimeout(()=>new Chart(canvas,{
+        type:cfg.type||'bar',
+        data:{
+          labels:cfg.labels,
+          datasets:[{
+            label:cfg.label||'Value',
+            data:cfg.data,
+            backgroundColor:cfg.type==='line'?c+'0.1)':cfg.data.map((_,i)=>c+(0.4+i*0.06)+')'),
+            borderColor:c+'0.9)',
+            borderWidth:cfg.type==='line'?2:1,
+            borderRadius:cfg.type==='bar'?4:0,
+            fill:cfg.type==='line',
+            tension:.3,
+            pointRadius:cfg.type==='line'?4:0,
+            pointBackgroundColor:c+'1)',
+          }]
+        },
+        options:{
+          responsive:true,
+          plugins:{legend:{labels:{color:'#a1a1aa',boxWidth:12}}},
+          scales:{
+            x:{ticks:{color:'#52525b',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}},
+            y:{ticks:{color:'#52525b',font:{size:11}},grid:{color:'rgba(255,255,255,.04)'}}
+          }
+        }
+      }),50);
+    }catch(e){}
+  }
+
+  wrap.appendChild(msg);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+}
+
+function showThinking(){
+  const wrap=document.createElement('div');
+  wrap.className='msg-wrap ai';wrap.id='thinking';
+  const t=document.createElement('div');
+  t.className='thinking';
+  t.innerHTML='<span></span><span></span><span></span><span class="thinking-text">Analysing data…</span>';
+  wrap.appendChild(t);
+  document.getElementById('messages').appendChild(wrap);
+  scrollBottom();
+}
+function removeThinking(){const t=document.getElementById('thinking');if(t)t.remove();}
+function scrollBottom(){const m=document.getElementById('messages');m.scrollTop=m.scrollHeight;}
+function ask(el){sendMessage(el.textContent);}
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}}
+</script>
+</body>
+</html>
