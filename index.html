@@ -26,7 +26,7 @@
 </nav>
 
 <!-- ╔══════════════════════════════════════════╗ -->
-<!-- ║                HERO                     ║ -->
+<!-- ║               HERO                      ║ -->
 <!-- ╚══════════════════════════════════════════╝ -->
 <section id="about">
   <div class="hero-bg"></div>
@@ -132,7 +132,6 @@
       <h2>Work Experience</h2>
       <p>Building data infrastructure and AI-driven analytics solutions at enterprise scale.</p>
     </div>
-
     <div class="timeline">
       <div class="timeline-item fade-up">
         <div class="timeline-dot"></div>
@@ -148,7 +147,6 @@
           <li>Managed deployment across Azure and OpenShift with <strong>GitHub Actions CI/CD</strong> — cutting release time by 50% and deployment errors by 35%.</li>
         </ul>
       </div>
-
       <div class="timeline-item fade-up">
         <div class="timeline-dot"></div>
         <div class="timeline-meta">
@@ -164,7 +162,6 @@
         </ul>
       </div>
     </div>
-
     <div class="edu-card fade-up">
       <div class="edu-icon">🎓</div>
       <div class="edu-body">
@@ -177,7 +174,7 @@
 </section>
 
 <!-- ╔══════════════════════════════════════════╗ -->
-<!-- ║              PROJECTS                   ║ -->
+<!-- ║               PROJECTS                  ║ -->
 <!-- ╚══════════════════════════════════════════╝ -->
 <section id="projects">
   <div class="container">
@@ -279,7 +276,7 @@
         </div>
         <div class="project-body">
           <h3>CI/CD Pipeline Visualizer</h3>
-          <div class="project-metric">📈 Animated GitHub Actions · Stage-by-stage execution · Simulate success & failure</div>
+          <div class="project-metric">📈 Animated GitHub Actions · Stage-by-stage execution · Simulate success &amp; failure</div>
           <p>Interactive animated CI/CD pipeline showing GitHub Actions stages from checkout → lint → test → build → push → deploy. Simulate success or failure with live log streaming and job runner breakdown.</p>
           <div class="project-tags">
             <span class="tag purple">GitHub Actions</span><span class="tag purple">Azure DevOps</span>
@@ -313,7 +310,7 @@
 </section>
 
 <!-- ╔══════════════════════════════════════════╗ -->
-<!-- ║               CONTACT                  ║ -->
+<!-- ║               CONTACT                   ║ -->
 <!-- ╚══════════════════════════════════════════╝ -->
 <section id="contact">
   <div class="container">
@@ -323,11 +320,12 @@
         <h2>Get In Touch</h2>
         <p>Open to new opportunities in data engineering, analytics, and AI-powered solutions. Based in Budapest, Hungary. Open to roles worldwide and willing to relocate.</p>
         <div class="contact-links">
-          <a class="contact-link" href="/cdn-cgi/l/email-protection#1b7d7a7372762b2b2c7a777e7d7a71725b7c767a727735787476">
+          <!-- FIX: replaced Cloudflare-obfuscated href with real mailto -->
+          <a class="contact-link" href="mailto:fahim.a.efaji@gmail.com">
             <span class="contact-link-icon">✉️</span>
             <div class="contact-link-body">
               <div class="contact-link-label">Email</div>
-              <div class="contact-link-value"><span class="__cf_email__" data-cfemail="bcdaddd4d5d18c8c8bddd0d9daddd6d5fcdbd1ddd5d092dfd3d1">[email&#160;protected]</span></div>
+              <div class="contact-link-value">fahim.a.efaji@gmail.com</div>
             </div>
           </a>
           <a class="contact-link" href="tel:+36704077007">
@@ -356,7 +354,6 @@
 
       <div class="fade-up">
         <p class="section-tag" style="margin-bottom:1rem">// send a message</p>
-        <!-- Messages saved to IndexedDB locally; replace AZURE_FUNCTION_URL in main.js for live email -->
         <form id="contact-form" class="contact-form" autocomplete="off">
           <div class="form-group">
             <label for="name">Name</label>
@@ -383,7 +380,7 @@
 </section>
 
 <!-- ╔══════════════════════════════════════════╗ -->
-<!-- ║               FOOTER                   ║ -->
+<!-- ║               FOOTER                    ║ -->
 <!-- ╚══════════════════════════════════════════╝ -->
 <footer>
   <div class="container">
@@ -392,6 +389,7 @@
 </footer>
 
 <!-- ── Project Demo Modal ── -->
+<!-- FIX: Complete modal with iframe (was truncated/missing) -->
 <div id="demo-modal">
   <div class="modal-box">
     <div class="modal-header">
@@ -401,3 +399,11 @@
         <button class="modal-close" id="modal-close">✕ Close</button>
       </div>
     </div>
+    <!-- FIX: this iframe was missing — it's what actually displays the project -->
+    <iframe id="demo-iframe" src="" frameborder="0" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>
